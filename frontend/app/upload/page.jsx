@@ -155,7 +155,9 @@ export default function UploadPage() {
       formData.append('source_type', sourceType || 'physical_label');
       formData.append('metadata', JSON.stringify(metadata));
 
-      const token = sessionStorage.getItem('token');
+      const token = (typeof window !== 'undefined') 
+        ? (sessionStorage.getItem('token') || localStorage.getItem('token')) 
+        : null;
       const res = await fetch(`${API}/scans`, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -222,7 +224,7 @@ export default function UploadPage() {
 
       // 2. Setup parallel polling interval to guarantee completion detection
       let attempts = 0;
-      const maxAttempts = 55; // 80+ seconds max for free tier cold starts
+      const maxAttempts = 90; // 90 seconds max for free tier cold starts
       const progressSteps = [
         'Multimodal Vision & OCR token extraction running...',
         'Auditing declarations against Legal Metrology Rules, 2011...',
@@ -254,13 +256,15 @@ export default function UploadPage() {
           const pollJson = await pollRes.json();
           const batchData = pollJson.data || pollJson;
 
-          if (batchData.status === 'complete' || batchData.status === 'completed') {
+          const firstScan = (batchData.scans && batchData.scans.length > 0) ? batchData.scans[0] : null;
+          const isComplete = batchData.status === 'complete' || batchData.status === 'completed' || (firstScan && firstScan.status === 'complete');
+
+          if (isComplete) {
             if (completed) return;
             completed = true;
             clearInterval(pollInterval);
             if (sse) sse.close();
             
-            const firstScan = (batchData.scans && batchData.scans.length > 0) ? batchData.scans[0] : null;
             const targetId = (firstScan && firstScan.id) ? firstScan.id : batchId;
             
             setLogs(prev => [...prev, '> Compliance report generated successfully!']);
@@ -276,9 +280,9 @@ export default function UploadPage() {
             setLogs(prev => [...prev, `> ERROR: ${failMsg}`]);
             toast.error('Scan failed: ' + failMsg, { id: toastId });
           } else {
-            // Processing: show informative progressive steps every 3 attempts
-            if (attempts % 3 === 0) {
-              const stepIdx = Math.floor(attempts / 3) - 1;
+            // Processing: show informative progressive steps every 4 seconds
+            if (attempts % 4 === 0) {
+              const stepIdx = Math.floor(attempts / 4) - 1;
               if (stepIdx < progressSteps.length) {
                 const stepMsg = `> ${progressSteps[stepIdx]}`;
                 setLogs(prev => prev.includes(stepMsg) ? prev : [...prev, stepMsg]);
@@ -288,7 +292,7 @@ export default function UploadPage() {
         } catch (err) {
           // network glitch, retry next tick
         }
-      }, 1500);
+      }, 1000);
 
     } catch (err) {
       const displayMsg = extractErrorMessage(err);

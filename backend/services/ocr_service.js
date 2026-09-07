@@ -16,7 +16,7 @@ const { extractFields } = require('./extraction_service');
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const MAX_DIMENSION_PX = 1400; // Resize to max 1400px on longest edge for optimal AI vision latency
-const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-2.0-flash'];
+const GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.6-flash'];
 
 // ─── STEP 1: IMAGE VALIDATION & PREPROCESSING ────────────────────────────────
 async function validateResolution(imagePath) {
@@ -57,14 +57,13 @@ async function preprocessImage(imagePath) {
 // ─── JSON SCHEMA PROMPT ───────────────────────────────────────────────────────
 const SCHEMA_HINT = JSON.stringify({
   products: [{
-    ai_summary: "string (A strictly detailed 4-6 sentence executive summary. You MUST explicitly state exactly WHICH rules passed and exactly WHY any rules failed. Do not sugarcoat. Be precise about legal metrology compliance.)",
-    raw_text_transcript: "string",
+    raw_text_transcript: "Literal transcription of all readable text on the package",
     product_name: "string",
     brand_name: "string",
     net_quantity: "string or number",
-    net_quantity_unit: "string (e.g. g, ml)",
+    net_quantity_unit: "string (e.g. g, ml, kg, l)",
     mrp: "string or number",
-    mrp_includes_tax_statement: "boolean or string",
+    mrp_includes_tax_statement: true,
     mfg_date: "string",
     best_before: "string",
     manufacturer_name: "string",
@@ -74,14 +73,8 @@ const SCHEMA_HINT = JSON.stringify({
     fssai_license: "string",
     country_of_origin: "string",
     ingredients: "string",
-    veg_nonveg: "string",
-    ingredient_analysis: {
-      is_clean_label: "boolean (true if no synthetic chemicals or artificial preservatives)",
-      harmful_additives_found: ["array of strings"],
-      health_risks: ["array of strings"],
-      allergens_detected: ["array of strings"],
-      ingredient_dictionary: [{ name: "string", description: "string (1-2 sentence detailed scientific explanation of this ingredient's purpose and safety)" }]
-    }
+    veg_nonveg: "veg or non_veg",
+    allergens_detected: ["array of strings"]
   }]
 }, null, 2);
 
@@ -101,7 +94,7 @@ async function runGeminiVision(imagePaths, modelIndex = 0) {
     throw new Error('Gemini API key not configured.');
   }
 
-  const modelName = GEMINI_MODELS[modelIndex] || 'gemini-flash-latest';
+  const modelName = GEMINI_MODELS[modelIndex] || 'gemini-3.5-flash-lite';
   const paths = Array.isArray(imagePaths) ? imagePaths : [imagePaths];
   const mimeType = 'image/jpeg';
 
@@ -113,11 +106,14 @@ async function runGeminiVision(imagePaths, modelIndex = 0) {
 
   const payload = {
     contents: [{ parts }],
-    generationConfig: { temperature: 0.0 }
+    generationConfig: {
+      temperature: 0.0,
+      maxOutputTokens: 4096
+    }
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${config.gemini.apiKey}`, {
@@ -148,16 +144,31 @@ async function runGeminiVision(imagePaths, modelIndex = 0) {
       structuredData = { products };
     } catch (parseErr) {
       console.warn('[OCR] Gemini JSON parse warning:', parseErr.message);
-      structuredData = { products: [{ product_name: 'Packaged Commodity', raw_text_transcript: cleaned }] };
+      // Robust regex salvage if JSON is slightly truncated
+      const salvagedName = cleaned.match(/"product_name"\s*:\s*"([^"]+)"/)?.[1] || 'Packaged Commodity';
+      const salvagedBrand = cleaned.match(/"brand_name"\s*:\s*"([^"]+)"/)?.[1] || null;
+      const salvagedMrp = cleaned.match(/"mrp"\s*:\s*"([^"]+)"/)?.[1] || null;
+      const salvagedQty = cleaned.match(/"net_quantity"\s*:\s*"([^"]+)"/)?.[1] || null;
+      const salvagedTranscript = cleaned.match(/"raw_text_transcript"\s*:\s*"([^"]+)"/)?.[1] || cleaned;
+
+      structuredData = {
+        products: [{
+          product_name: salvagedName,
+          brand_name: salvagedBrand,
+          mrp: salvagedMrp,
+          net_quantity: salvagedQty,
+          raw_text_transcript: salvagedTranscript
+        }]
+      };
     }
 
     const rawText = structuredData.products[0]?.raw_text_transcript || responseText;
-    console.log(`[OCR] Gemini API (${modelName}) extraction complete`);
+    console.log(`[OCR] Gemini API (${modelName}) extraction complete (${rawText.length} chars)`);
 
     return {
       text: rawText,
       structuredData,
-      confidence: 90,
+      confidence: 92,
       engine: 'gemini'
     };
   } catch (err) {
@@ -165,7 +176,7 @@ async function runGeminiVision(imagePaths, modelIndex = 0) {
     if (modelIndex + 1 < GEMINI_MODELS.length) {
       const nextModel = GEMINI_MODELS[modelIndex + 1];
       console.warn(`[OCR] Gemini failed with ${modelName} (${err.message}) - cascading to ${nextModel}...`);
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, 600));
       return runGeminiVision(imagePaths, modelIndex + 1);
     }
     throw err;
@@ -358,7 +369,16 @@ async function runOcrPipeline(imagePaths, metadata = {}) {
       try {
         console.log('[OCR] Tier 1: Querying Google Gemini Vision...');
         const res = await runGeminiVision(processedPaths);
-        return formatResult(res);
+        const hasValidText = res && (
+          (res.text && res.text.trim().length > 25) ||
+          (res.structuredData?.products?.[0]?.raw_text_transcript?.trim().length > 25) ||
+          (res.structuredData?.products?.[0]?.product_name && res.structuredData.products[0].product_name !== 'Packaged Commodity')
+        );
+        if (hasValidText) {
+          return formatResult(res);
+        }
+        console.warn('[OCR] Tier 1 Gemini returned empty or incomplete text transcript. Cascading to NVIDIA NIM...');
+        errors.push('Gemini returned empty or truncated result');
       } catch (geminiErr) {
         console.warn('[OCR] Tier 1 (Gemini) failed:', geminiErr.message);
         errors.push(`Gemini: ${geminiErr.message}`);
