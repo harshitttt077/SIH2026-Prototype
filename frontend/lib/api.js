@@ -9,12 +9,12 @@
 //   - New: rules endpoint, report generation
 // ============================================================
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1';
 
 // ─── AUTH TOKEN ──────────────────────────────────────────────────────────────
 function getToken() {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('metrolens_token');
+  return sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('metrolens_token');
 }
 
 // ─── BASE FETCH ───────────────────────────────────────────────────────────────

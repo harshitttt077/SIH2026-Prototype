@@ -141,7 +141,7 @@ export default function UploadPage() {
     
     setLoading(true);
     const toastId = toast.loading(files.length > 1 ? 'Processing multi-angle context...' : 'Initializing compliance scan...');
-    const metadata = { productName: productName || 'Unknown', sourceType, forceEngine: 'gemini', timestamp: new Date().toISOString() };
+    const metadata = { productName: productName || 'Unknown', sourceType, timestamp: new Date().toISOString() };
     
     try {
       setLogs([
@@ -215,7 +215,6 @@ export default function UploadPage() {
 
         sse.onerror = () => {
           if (sse) sse.close();
-          // Fallback seamlessly to polling without throwing or redirecting prematurely
         };
       } catch (e) {
         // SSE unsupported or blocked, fallback to polling
@@ -223,7 +222,14 @@ export default function UploadPage() {
 
       // 2. Setup parallel polling interval to guarantee completion detection
       let attempts = 0;
-      const maxAttempts = 40; // 60 seconds max
+      const maxAttempts = 55; // 80+ seconds max for free tier cold starts
+      const progressSteps = [
+        'Multimodal Vision & OCR token extraction running...',
+        'Auditing declarations against Legal Metrology Rules, 2011...',
+        'Verifying ISO/IEC 17025 guard-bands & Rule 7/8/9 geometry...',
+        'Generating Section 48 compounding notice & statutory ledger...'
+      ];
+
       const pollInterval = setInterval(async () => {
         if (completed) {
           clearInterval(pollInterval);
@@ -270,9 +276,13 @@ export default function UploadPage() {
             setLogs(prev => [...prev, `> ERROR: ${failMsg}`]);
             toast.error('Scan failed: ' + failMsg, { id: toastId });
           } else {
-            // Still processing: increment subtle progress step
-            if (attempts % 2 === 0 && logs.length < 8) {
-              setLogs(prev => [...prev, '> Analyzing label declarations against Legal Metrology Rules...']);
+            // Processing: show informative progressive steps every 3 attempts
+            if (attempts % 3 === 0) {
+              const stepIdx = Math.floor(attempts / 3) - 1;
+              if (stepIdx < progressSteps.length) {
+                const stepMsg = `> ${progressSteps[stepIdx]}`;
+                setLogs(prev => prev.includes(stepMsg) ? prev : [...prev, stepMsg]);
+              }
             }
           }
         } catch (err) {
