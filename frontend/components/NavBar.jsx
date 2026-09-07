@@ -121,7 +121,7 @@ export default function NavBar() {
               Officer Sign In
             </Link>
             <Link 
-              href="/upload" 
+              href="/login" 
               className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-1.5 px-3.5 text-xs rounded-lg shadow-sm transition-all"
             >
               Start Inspection

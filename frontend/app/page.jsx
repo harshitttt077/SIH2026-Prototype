@@ -148,30 +148,20 @@ export default function LandingPage() {
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center gap-4 mb-8 w-full sm:w-auto">
               <Link
-                href={isAuthenticated ? "/upload" : "/login"}
+                href="/login"
                 className="w-full sm:w-auto text-center inline-flex items-center justify-center gap-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm px-7 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all"
               >
                 <Scan size={18} />
                 <span>Start Label Inspection</span>
                 <ArrowRight size={16} />
               </Link>
-              {isAuthenticated ? (
-                <Link
-                  href="/dashboard"
-                  className="w-full sm:w-auto text-center inline-flex items-center justify-center gap-2 bg-[#0B1F3A] hover:bg-blue-900 text-white font-semibold text-sm px-6 py-3.5 rounded-xl shadow-sm transition-all"
-                >
-                  <Building2 size={16} className="text-amber-400" />
-                  <span>Enforcement Command Centre</span>
-                </Link>
-              ) : (
-                <Link
-                  href="/rules"
-                  className="w-full sm:w-auto text-center inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all shadow-sm"
-                >
-                  <BookOpen size={16} className="text-slate-500" />
-                  <span>Browse Statutory Rules</span>
-                </Link>
-              )}
+              <Link
+                href="/rules"
+                className="w-full sm:w-auto text-center inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all shadow-sm"
+              >
+                <BookOpen size={16} className="text-slate-500" />
+                <span>Browse Statutory Rules</span>
+              </Link>
             </div>
 
             {/* Official Statutory Impact Metrics */}
