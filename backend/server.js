@@ -51,6 +51,7 @@ app.get(`${API}/health`, (req, res) => {
       status: 'ok',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
+      commit: process.env.RENDER_GIT_COMMIT || 'local',
       service: 'MetroLens — SIH26034 Legal Metrology Compliance Checker',
       geminiEnabled: config.gemini?.enabled ?? false,
     },
