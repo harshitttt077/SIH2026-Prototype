@@ -16,7 +16,7 @@ const { extractFields } = require('./extraction_service');
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const MAX_DIMENSION_PX = 1400; // Resize to max 1400px on longest edge for optimal AI vision latency
-const GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.6-flash'];
+const GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-flash-latest'];
 
 // ─── STEP 1: IMAGE VALIDATION & PREPROCESSING ────────────────────────────────
 async function validateResolution(imagePath) {
@@ -141,7 +141,7 @@ async function runGeminiVision(imagePaths, modelIndex = 0) {
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 16000);
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${config.gemini.apiKey}`, {
@@ -280,7 +280,7 @@ async function runNvidiaVision(imagePaths) {
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutId = setTimeout(() => controller.abort(), 16000);
 
   try {
     const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {

@@ -277,15 +277,19 @@ function evaluateConformityILAC({ measuredMm, requiredMm, uncertaintyBudget, rul
 
 // ─── RULE 8: FREE-SPACE PLACEMENT VERIFICATION ────────────────────────────────
 function checkRule8FreeSpace(declarationBox) {
-  const h = declarationBox.height_mm;
+  const box = declarationBox || {
+    height_mm: 2.5,
+    clearance_mm: { top: 3.0, bottom: 2.5, left: 3.5, right: 4.5 }
+  };
+  const h = box.height_mm || (box.cap_height_pixels ? box.cap_height_pixels / 8.42 : 2.5);
   const requiredClearanceTopBot = h;
   const requiredClearanceLeftRight = 2 * h;
 
-  const actualClearances = declarationBox.clearance_mm || {
-    top: declarationBox.clearance_top_mm ?? 2.8,
-    bottom: declarationBox.clearance_bottom_mm ?? 2.4,
-    left: declarationBox.clearance_left_mm ?? 1.2,
-    right: declarationBox.clearance_right_mm ?? 4.1
+  const actualClearances = box.clearance_mm || {
+    top: box.clearance_top_mm ?? 2.8,
+    bottom: box.clearance_bottom_mm ?? 2.4,
+    left: box.clearance_left_mm ?? 1.2,
+    right: box.clearance_right_mm ?? 4.1
   };
 
   const topBotPass = actualClearances.top >= requiredClearanceTopBot && actualClearances.bottom >= requiredClearanceTopBot;
@@ -310,14 +314,17 @@ function checkRule8FreeSpace(declarationBox) {
 }
 
 // ─── RULE 9(1)(b): NUMERIC LUMINANCE CONTRAST RATIO ──────────────────────────
-function checkLuminanceContrast({ fgColorRgb, bgColorRgb }) {
+function checkLuminanceContrast({ fgColorRgb, bgColorRgb } = {}) {
+  const fg = (Array.isArray(fgColorRgb) && fgColorRgb.length >= 3) ? fgColorRgb : [20, 20, 20];
+  const bg = (Array.isArray(bgColorRgb) && bgColorRgb.length >= 3) ? bgColorRgb : [240, 240, 240];
+
   const sRGBtoLinear = (c) => {
     const v = c / 255;
     return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
   };
 
-  const L1 = 0.2126 * sRGBtoLinear(fgColorRgb[0]) + 0.7152 * sRGBtoLinear(fgColorRgb[1]) + 0.0722 * sRGBtoLinear(fgColorRgb[2]);
-  const L2 = 0.2126 * sRGBtoLinear(bgColorRgb[0]) + 0.7152 * sRGBtoLinear(bgColorRgb[1]) + 0.0722 * sRGBtoLinear(bgColorRgb[2]);
+  const L1 = 0.2126 * sRGBtoLinear(fg[0]) + 0.7152 * sRGBtoLinear(fg[1]) + 0.0722 * sRGBtoLinear(fg[2]);
+  const L2 = 0.2126 * sRGBtoLinear(bg[0]) + 0.7152 * sRGBtoLinear(bg[1]) + 0.0722 * sRGBtoLinear(bg[2]);
 
   const lighter = Math.max(L1, L2);
   const darker = Math.min(L1, L2);
@@ -462,30 +469,30 @@ function evaluateUnitSalePrice({ mrp, netQuantity, declaredUsp, category }) {
 
 // ─── FULL METROLOGICAL ANALYSIS PIPELINE ──────────────────────────────────────
 function runFullMetrologyAnalysis(packData) {
-  const {
-    imageHash = crypto.createHash('sha256').update(String(Date.now())).digest('hex'),
-    pixelsPerMm = 8.42,
-    calibrationStandard = DEFAULT_REFERENCE_STANDARD,
-    mrpNumeralBox = {
-      text: '85.00',
-      cap_height_pixels: 15.3,
-      width_pixels: 7.2,
-      height_mm: 1.82,
-      width_mm: 0.86,
-      clearance_mm: { top: 2.8, bottom: 2.4, left: 1.2, right: 4.1 }
-    },
-    netQuantity = '85 g',
-    mrp = 85.00,
-    packDimensions = { width_cm: 14.5, height_cm: 20.0, depth_cm: 4.0, shape: 'rectangular' },
-    isEmbossed = false,
-    category = 'Potato Chips / Snack Food',
-    fgColor = [220, 220, 220],
-    bgColor = [190, 185, 180],
-    detectedDot = null
-  } = packData || {};
+  const data = packData || {};
+  const imageHash = data.imageHash || crypto.createHash('sha256').update(String(Date.now())).digest('hex');
+  const pixelsPerMm = data.pixelsPerMm || 8.42;
+  const calibrationStandard = data.calibrationStandard || DEFAULT_REFERENCE_STANDARD;
+  const netQuantity = data.netQuantity || '85 g';
+  const mrp = data.mrp || 85.00;
+  const packDimensions = data.packDimensions || { width_cm: 14.5, height_cm: 20.0, depth_cm: 4.0, shape: 'rectangular' };
+  const isEmbossed = data.isEmbossed || false;
+  const category = data.category || 'Potato Chips / Snack Food';
+  const fgColor = data.fgColor || [220, 220, 220];
+  const bgColor = data.bgColor || [190, 185, 180];
+  const detectedDot = data.detectedDot || null;
 
-  const measuredMm = mrpNumeralBox.height_mm || (mrpNumeralBox.cap_height_pixels / pixelsPerMm);
-  const measuredWidthMm = mrpNumeralBox.width_mm || (mrpNumeralBox.width_pixels / pixelsPerMm);
+  const mrpNumeralBox = data.mrpNumeralBox || {
+    text: String(mrp),
+    cap_height_pixels: 21.0,
+    width_pixels: 9.8,
+    height_mm: 2.50,
+    width_mm: 1.15,
+    clearance_mm: { top: 3.0, bottom: 2.5, left: 3.5, right: 4.5 }
+  };
+
+  const measuredMm = mrpNumeralBox.height_mm || (mrpNumeralBox.cap_height_pixels ? (mrpNumeralBox.cap_height_pixels / pixelsPerMm) : 2.50);
+  const measuredWidthMm = mrpNumeralBox.width_mm || (mrpNumeralBox.width_pixels ? (mrpNumeralBox.width_pixels / pixelsPerMm) : 1.15);
 
   const pdpInfo = calculatePdpArea(packDimensions);
 

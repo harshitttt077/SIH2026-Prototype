@@ -224,7 +224,7 @@ export default function UploadPage() {
 
       // 2. Setup parallel polling interval to guarantee completion detection
       let attempts = 0;
-      const maxAttempts = 90; // 90 seconds max for free tier cold starts
+      const maxAttempts = 120; // 120 seconds max for free tier cold starts
       const progressSteps = [
         'Multimodal Vision & OCR token extraction running...',
         'Auditing declarations against Legal Metrology Rules, 2011...',
