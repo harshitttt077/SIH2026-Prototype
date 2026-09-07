@@ -1,6 +1,6 @@
 // backend/scripts/seedDatabase.js
 // ============================================================
-// Initial Catalog Sync for SIH26034 SatyaLabel
+// Initial Catalog Sync for SIH26034 MetroLens
 // Updated for spec 03: Product table + JSONB extracted_fields
 // ============================================================
 // Usage: npm run db:seed
@@ -299,26 +299,26 @@ async function seed() {
   const adminHash   = await bcrypt.hash('admin1234', 10);
 
   const [adminUser] = await User.findOrCreate({
-    where: { email: 'admin@satyalabel.gov.in' },
+    where: { email: 'admin@metrolens.gov.in' },
     defaults: {
       name: 'System Administrator',
-      email: 'admin@satyalabel.gov.in',
+      email: 'admin@metrolens.gov.in',
       passwordHash: adminHash,
       role: 'admin',
     },
   });
-  console.log('✅ Registered: admin@satyalabel.gov.in');
+  console.log('✅ Registered: admin@metrolens.gov.in');
 
   const [officerUser] = await User.findOrCreate({
-    where: { email: 'officer@satyalabel.gov.in' },
+    where: { email: 'officer@metrolens.gov.in' },
     defaults: {
       name: 'Enforcement Officer',
-      email: 'officer@satyalabel.gov.in',
+      email: 'officer@metrolens.gov.in',
       passwordHash: officerHash,
       role: 'officer',
     },
   });
-  console.log('✅ Registered: officer@satyalabel.gov.in');
+  console.log('✅ Registered: officer@metrolens.gov.in');
 
   // ── Products + Scans + Violations ────────────────────────────────────────────
   let scanCount = 0;

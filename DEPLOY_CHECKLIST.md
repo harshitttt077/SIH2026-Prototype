@@ -31,5 +31,5 @@ Because some tools (`render`, `psql`) are not installed/authenticated on your ma
 5. **Connect Vercel to Render**:
    - Go to your Vercel Dashboard for the frontend deployment.
    - Go to Settings -> Environment Variables.
-   - Add `NEXT_PUBLIC_API_URL` and set it to your new Render backend URL (e.g. `https://satyalabel-backend.onrender.com/api/v1`).
+   - Add `NEXT_PUBLIC_API_URL` and set it to your new Render backend URL (e.g. `https://metrolens-backend.onrender.com/api/v1`).
    - Trigger a redeploy on Vercel so it picks up the environment variable.

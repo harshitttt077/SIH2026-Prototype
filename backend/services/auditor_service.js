@@ -9,7 +9,7 @@ async function generateAIAuditorAnalysis(fieldsMap, violations, rawText) {
   
   try {
     const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
     
     const prompt = `You are an expert Legal Metrology Compliance Auditor in India. 
 You are reviewing a product label for compliance with the Legal Metrology (Packaged Commodities) Rules, 2011.

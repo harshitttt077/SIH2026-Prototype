@@ -44,7 +44,7 @@ export default function NavBar() {
         </div>
         <div className="flex flex-col justify-center">
           <span className="text-[10px] font-sans tracking-[0.05em] text-white/80 uppercase mb-0.5 font-medium">उपभोक्ता मामले विभाग • Dept. of Consumer Affairs</span>
-          <span className="font-semibold tracking-tight text-[17px] text-white leading-none">SatyaLabel <span className="font-normal text-white/80 text-[15px]">Legal Metrology</span></span>
+          <span className="font-semibold tracking-tight text-[17px] text-white leading-none">MetroLens <span className="font-normal text-white/80 text-[15px]">Legal Metrology</span></span>
         </div>
       </div>
 

@@ -4,6 +4,7 @@
 // Schema matches 03_DATABASE_SCHEMA.md exactly (SIH26034)
 // ============================================================
 
+const path = require('path');
 const { Sequelize, DataTypes } = require('sequelize');
 const config = require('../config');
 
@@ -12,18 +13,26 @@ const sequelizeOptions = {
   pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },
 };
 
-const sequelize = config.db.url 
-  ? new Sequelize(config.db.url, { 
-      dialect: 'postgres', 
-      logging: false, 
-      dialectOptions: { ssl: { require: true, rejectUnauthorized: false } } 
-    })
-  : new Sequelize(config.db.name, config.db.user, config.db.password, {
-      host: config.db.host,
-      port: config.db.port,
-      dialect: 'postgres',
+const useSqlite = process.env.USE_SQLITE === 'true' || process.env.DB_DIALECT === 'sqlite' || (!config.db.url && process.env.NODE_ENV !== 'production');
+
+const sequelize = useSqlite
+  ? new Sequelize({
+      dialect: 'sqlite',
+      storage: path.join(__dirname, '../test.sqlite'),
       logging: false
-    });
+    })
+  : config.db.url 
+    ? new Sequelize(config.db.url, { 
+        dialect: 'postgres', 
+        logging: false, 
+        dialectOptions: { ssl: { require: true, rejectUnauthorized: false } } 
+      })
+    : new Sequelize(config.db.name, config.db.user, config.db.password, {
+        host: config.db.host,
+        port: config.db.port,
+        dialect: 'postgres',
+        logging: false
+      });
 
 // ─── TABLE: users ─────────────────────────────────────────────────────────────
 // Enforcement officers and admins

@@ -10,7 +10,7 @@ const { randomUUID: uuidv4 } = require('crypto');
 const fs = require('fs');
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
-const MAX_FILE_SIZE_MB = 10; // Spec 04: max 10 MB
+const MAX_FILE_SIZE_MB = 35;
 
 if (!fs.existsSync(UPLOAD_DIR)) { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); }
 
@@ -19,19 +19,19 @@ const storage = multer.diskStorage({
     cb(null, UPLOAD_DIR);
   },
   filename: function (req, file, cb) {
-    cb(null, `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`);
+    cb(null, `${Date.now()}-${uuidv4()}${path.extname(file.originalname || '.jpg')}`);
   }
 });
-// (webp/bmp/tiff removed — not specified in spec; keeping simple for demo)
-const fileFilter = (req, file, cb) => {
-  const allowed = ['.jpg', '.jpeg', '.png'];
-  const ext = path.extname(file.originalname).toLowerCase();
-  const mimeAllowed = ['image/jpeg', 'image/png'].includes(file.mimetype);
 
-  if (!allowed.includes(ext) || !mimeAllowed) {
+const fileFilter = (req, file, cb) => {
+  const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.heic', '.heif', '.bmp'];
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  const isImageMime = !file.mimetype || file.mimetype.startsWith('image/') || file.mimetype === 'application/octet-stream';
+
+  if (!isImageMime && ext && !allowed.includes(ext)) {
     return cb(
       Object.assign(
-        new Error(`Only JPG and PNG images are accepted. Received: ${file.mimetype || ext}`),
+        new Error(`Unsupported file type. Received: ${file.mimetype || ext}`),
         { code: 'INVALID_FILE_TYPE' }
       ),
       false
@@ -44,7 +44,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: MAX_FILE_SIZE_MB * 1024 * 1024, // 10 MB
+    fileSize: MAX_FILE_SIZE_MB * 1024 * 1024, // 35 MB
     files: 4, // Max 4 images per request
   },
 });

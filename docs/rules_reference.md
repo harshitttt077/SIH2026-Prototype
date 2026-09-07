@@ -1,5 +1,5 @@
 # Rules Reference — Legal Metrology (Packaged Commodities) Rules, 2011
-## For Judge Verification — SIH26034 SatyaLabel
+## For Judge Verification — SIH26034 MetroLens
 
 This document lists every rule implemented in `backend/services/rules_engine.js`.
 Judges can verify each rule against the official Gazette notification.
@@ -213,5 +213,5 @@ All estimated findings are clearly labeled **[ESTIMATED]** in the UI, PDF report
 
 ---
 
-*Rules Reference for SatyaLabel — SIH26034*
+*Rules Reference for MetroLens — SIH26034*
 *Legal Metrology (Packaged Commodities) Rules, 2011 — Government of India*

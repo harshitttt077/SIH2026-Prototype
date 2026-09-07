@@ -20,7 +20,7 @@ export default function AboutPage() {
         >
           <ArrowLeft size={24} className="text-text-primary" />
         </button>
-        <h1 className="text-[17px] font-bold ml-2">About SatyaLabel</h1>
+        <h1 className="text-[17px] font-bold ml-2">About MetroLens</h1>
       </div>
 
       <main className="max-w-[700px] mx-auto px-4 md:px-6 py-8 animate-fade-in">
@@ -36,7 +36,7 @@ export default function AboutPage() {
               className="h-32 w-auto relative z-10 drop-shadow-lg"
             />
           </div>
-          <h2 className="text-[32px] font-bold tracking-tight text-text-primary">SatyaLabel</h2>
+          <h2 className="text-[32px] font-bold tracking-tight text-text-primary">MetroLens</h2>
           <p className="text-[15px] font-medium text-accent uppercase tracking-widest mt-1">SIH26034</p>
           <p className="text-[14px] text-text-secondary mt-3 max-w-md mx-auto leading-relaxed">
             AI-driven compliance engine for the Legal Metrology (Packaged Commodities) Rules, 2011.
@@ -50,7 +50,7 @@ export default function AboutPage() {
             <h3 className="text-[13px] font-bold tracking-widest uppercase text-text-muted mb-4">Project Overview</h3>
             <div className="space-y-4 text-[14px] text-text-secondary leading-relaxed">
               <p>
-                <strong>SatyaLabel</strong> is built for the Smart India Hackathon (SIH) under the problem statement <strong>SIH26034</strong> issued by the <strong>Department of Consumer Affairs, Government of India</strong>.
+                <strong>MetroLens</strong> is built for the Smart India Hackathon (SIH) under the problem statement <strong>SIH26034</strong> issued by the <strong>Department of Consumer Affairs, Government of India</strong>.
               </p>
               <p>
                 The objective is to automate the scrutiny of pre-packaged commodity labels. By leveraging advanced Vision AI, the system instantly identifies mandatory declarations like Product Name, Net Quantity, MRP, Manufacturer Details, and FSSAI Licenses.

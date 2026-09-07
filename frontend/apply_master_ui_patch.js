@@ -19,7 +19,7 @@ export default function Login() {
     const toastId = toast.loading('Authenticating...');
 
     try {
-      const res = await fetch(\`\${process.env.NEXT_PUBLIC_API_URL || 'https://satyalabel-backend.onrender.com/api/v1'}/auth/login\`, {
+      const res = await fetch(\`\${process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1'}/auth/login\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -64,7 +64,7 @@ export default function Login() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <span className="font-bold tracking-tight text-[22px]">SatyaLabel</span>
+          <span className="font-bold tracking-tight text-[22px]">MetroLens</span>
         </div>
         
         <h1 className="text-[32px] font-semibold tracking-tight leading-[1.1] mb-2 relative z-10">Sign in</h1>
@@ -203,11 +203,11 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-4">
                   <div className="p-2.5 bg-background rounded-xl border border-border shadow-sm text-text-secondary"><Info size={18} /></div>
                   <div>
-                    <div className="font-medium text-[15px]">About SatyaLabel</div>
+                    <div className="font-medium text-[15px]">About MetroLens</div>
                     <div className="text-[12px] text-text-muted">Version 2.5.0 (Enterprise Build)</div>
                   </div>
                 </div>
-                <button onClick={() => toast.success('SatyaLabel Enterprise v2.5.0')} className="text-[13px] font-bold text-accent">View Details</button>
+                <button onClick={() => toast.success('MetroLens Enterprise v2.5.0')} className="text-[13px] font-bold text-accent">View Details</button>
               </div>
             </div>
           </section>

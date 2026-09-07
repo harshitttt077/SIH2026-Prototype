@@ -1,6 +1,6 @@
 // frontend/lib/api.js
 // ============================================================
-// API client — SatyaLabel backend
+// API client — MetroLens backend
 // Updated for Spec 05:
 //   - Base URL: /api/v1
 //   - Response envelope: { data: {...} } unwrapped automatically
@@ -14,7 +14,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v
 // ─── AUTH TOKEN ──────────────────────────────────────────────────────────────
 function getToken() {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('satyalabel_token');
+  return localStorage.getItem('metrolens_token');
 }
 
 // ─── BASE FETCH ───────────────────────────────────────────────────────────────

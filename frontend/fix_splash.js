@@ -46,7 +46,7 @@ export default function SplashScreen() {
       <div className="flex flex-col items-center justify-center -mt-10">
         <img 
           src="/icon-with-text.png" 
-          alt="SatyaLabel Logo" 
+          alt="MetroLens Logo" 
           className="w-48 h-auto object-contain z-10"
         />
         <div className="flex items-center gap-2 mt-8 opacity-0 animate-[fadeIn_1s_ease-in-out_0.2s_forwards]">

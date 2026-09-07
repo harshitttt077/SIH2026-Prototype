@@ -1,4 +1,4 @@
-# SatyaLabel — Local Setup & Deployment Guide (SIH26034)
+# MetroLens — Local Setup & Deployment Guide (SIH26034)
 
 ## Part A: Local Setup (Execution)
 
@@ -6,11 +6,11 @@ Follow these steps in this exact order:
 
 1. **Install PostgreSQL** on your laptop. Then, using `psql` or pgAdmin, run:
    ```sql
-   CREATE DATABASE satyalabel_db;
+   CREATE DATABASE metrolens_db;
    ```
 2. **Backend `.env` Configuration**:
    - In the `backend` folder, copy `.env.example` to `.env`.
-   - Fill in your local database credentials: `DB_USER`, `DB_PASSWORD`, `DB_NAME=satyalabel_db`, and `DB_PORT` (default is 5432).
+   - Fill in your local database credentials: `DB_USER`, `DB_PASSWORD`, `DB_NAME=metrolens_db`, and `DB_PORT` (default is 5432).
 3. **Install Dependencies**:
    - Open a terminal in the `frontend` folder and run `npm install`.
    - Open a terminal in the `backend` folder and run `npm install`.
@@ -59,7 +59,7 @@ Deploying gives you a safety net if your laptop fails on stage and allows judges
    - Once deployed, run your seed script against the remote database using Render's "Shell" or as a deployment hook.
 4. **Frontend on Vercel**:
    - Import your repository to Vercel and set the root directory to `frontend`.
-   - In Vercel's Environment Variables settings, add `NEXT_PUBLIC_API_URL` and set it to your deployed Render backend URL (e.g., `https://satyalabel-backend.onrender.com/api/v1`).
+   - In Vercel's Environment Variables settings, add `NEXT_PUBLIC_API_URL` and set it to your deployed Render backend URL (e.g., `https://metrolens-backend.onrender.com/api/v1`).
 5. **Test**:
    - Upload a real photo on the live Vercel URL to confirm OCR, Gemini fallback, and the rules engine work end-to-end.
 

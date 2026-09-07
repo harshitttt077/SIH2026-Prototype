@@ -1,8 +1,8 @@
 #!/bin/bash
-# Local setup script for SIH26034 SatyaLabel (Mac/Linux)
+# Local setup script for SIH26034 MetroLens (Mac/Linux)
 
 echo "============================================================"
-echo "SatyaLabel (SIH26034) Local Setup"
+echo "MetroLens (SIH26034) Local Setup"
 echo "============================================================"
 
 # 1. Check Node.js
@@ -43,7 +43,7 @@ cd .. || exit
 echo -e "\n============================================================"
 echo "Setup complete (dependencies installed)."
 echo "Next Steps:"
-echo "1. Create database: psql -U postgres -c \"CREATE DATABASE satyalabel_db;\""
+echo "1. Create database: psql -U postgres -c \"CREATE DATABASE metrolens_db;\""
 echo "2. Copy backend/.env.example to backend/.env and update credentials."
 echo "3. Seed database: cd backend && npm run db:seed"
 echo "4. Start backend: cd backend && npm run dev"

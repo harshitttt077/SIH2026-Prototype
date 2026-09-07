@@ -134,15 +134,7 @@ async function preprocessImage(imagePath) {
 // --- STEP 3: GROQ VISION FALLBACK ---
 
 
-async function runGeminiVision(imagePaths, attempt = 1, modelName = 'gemini-1.5-flash') {
-  if (!config.gemini?.enabled || !config.gemini?.apiKey) {
-    throw new Error('Gemini API key not configured.');
-  }
-
-  const paths = Array.isArray(imagePaths) ? imagePaths : [imagePaths];
-  const mimeType = 'image/jpeg';
-
-  const SCHEMA_HINT = JSON.stringify({
+const SCHEMA_HINT = JSON.stringify({
   products: [{
     ai_summary: "string (A strictly detailed 4-6 sentence executive summary. You MUST explicitly state exactly WHICH rules passed and exactly WHY any rules failed. Do not sugarcoat. Be precise about legal metrology compliance.)",
     raw_text_transcript: "string",
@@ -182,6 +174,14 @@ CRITICAL INSTRUCTIONS:
 - Your output MUST exactly match this JSON schema:
 ${SCHEMA_HINT}`;
 
+async function runGeminiVision(imagePaths, attempt = 1, modelName = 'gemini-flash-latest') {
+  if (!config.gemini?.enabled || !config.gemini?.apiKey) {
+    throw new Error('Gemini API key not configured.');
+  }
+
+  const paths = Array.isArray(imagePaths) ? imagePaths : [imagePaths];
+  const mimeType = 'image/jpeg';
+
   let rawText = '';
   let structuredData = {};
 
@@ -200,7 +200,7 @@ ${SCHEMA_HINT}`;
     };
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${config.gemini.apiKey}`, {
       method: 'POST',
@@ -236,10 +236,10 @@ ${SCHEMA_HINT}`;
 
   } catch (err) {
     if (attempt < 2) {
-      const nextModel = modelName === 'gemini-2.5-flash' ? 'gemini-2.5-pro' : 'gemini-2.0-flash';
+      const nextModel = modelName === 'gemini-3.6-flash' ? 'gemini-flash-latest' : 'gemini-2.5-flash';
       err.attemptHistory = (err.attemptHistory || '') + `[Attempt ${attempt} ${modelName}: ${err.message}] `;
-        console.warn(`[OCR] Gemini failed with ${modelName} (${err.message}) - retrying with ${nextModel}...`);
-      await new Promise(r => setTimeout(r, 2000));
+      console.warn(`[OCR] Gemini failed with ${modelName} (${err.message}) - retrying with ${nextModel}...`);
+      await new Promise(r => setTimeout(r, 1000));
       return runGeminiVision(imagePaths, attempt + 1, nextModel).catch(e => { e.message = err.attemptHistory + e.message; throw e; });
     }
     throw err;
@@ -396,7 +396,7 @@ const AIResponseSchema = z.object({
 
 
 // --- STEP 3B: NVIDIA NIM VISION FALLBACK ---
-async function runNvidiaVision(imagePaths, attempt = 1, modelName = 'meta/llama-3.2-90b-vision-instruct') {
+async function runNvidiaVision(imagePaths, attempt = 1, modelName = 'meta/llama-3.2-11b-vision-instruct') {
   if (!config.nvidia?.enabled || !config.nvidia?.apiKey) {
     throw new Error('NVIDIA API key not configured.');
   }
@@ -405,7 +405,7 @@ async function runNvidiaVision(imagePaths, attempt = 1, modelName = 'meta/llama-
   const mimeType = 'image/jpeg';
   
   const contentArray = [
-    { type: 'text', text: STRUCTURED_PROMPT }
+    { type: 'text', text: 'You are an automated Legal Metrology inspection auditor. Output ONLY a valid JSON object conforming strictly to this schema. Do NOT include markdown code fences, conversational intro text, or any explanation outside JSON. Start immediately with {\n' + SCHEMA_HINT }
   ];
   
   for (const p of paths) {
@@ -420,6 +420,10 @@ async function runNvidiaVision(imagePaths, attempt = 1, modelName = 'meta/llama-
     const payload = {
       model: modelName,
       messages: [
+        {
+          role: 'system',
+          content: 'You are an automated Legal Metrology inspection auditor. You MUST return ONLY a valid JSON object adhering strictly to the schema. Do NOT write any conversational text, greetings, markdown headers, or introductory phrases outside the JSON.'
+        },
         {
           role: 'user',
           content: contentArray
@@ -459,8 +463,14 @@ async function runNvidiaVision(imagePaths, attempt = 1, modelName = 'meta/llama-
     let rawText = '';
 
     try {
-      const jsonMatch = cleaned.match(/[\[\{][\s\S]*[\]\}]/);
-      const rawParsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(cleaned);
+      let rawParsed = null;
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { rawParsed = JSON.parse(jsonMatch[0]); } catch (_) {}
+      }
+      if (!rawParsed) {
+        rawParsed = JSON.parse(cleaned);
+      }
       const toValidate = Array.isArray(rawParsed.products) ? rawParsed : { products: Array.isArray(rawParsed) ? rawParsed : [rawParsed] };
       structuredData = AIResponseSchema.parse(toValidate);
     } catch (parseErr) {
@@ -492,6 +502,8 @@ async function runNvidiaVision(imagePaths, attempt = 1, modelName = 'meta/llama-
 
 async function runOcrPipeline(imagePaths, metadata = {}) {
   let processedPaths = [];
+  const metaObj = typeof metadata === 'string' ? { forceEngine: metadata } : (metadata || {});
+
   try {
     const paths = Array.isArray(imagePaths) ? imagePaths : [imagePaths];
     for (const p of paths) {
@@ -499,79 +511,77 @@ async function runOcrPipeline(imagePaths, metadata = {}) {
       processedPaths.push(await preprocessImage(p));
     }
     
-    let groqResult = null; let geminiResult = null;
-    let geminiErrStr = ''; let groqErrStr = ''; 
+    let geminiErrStr = ''; 
     
-    if (metadata.forceEngine === 'nvidia' && config.nvidia?.enabled) {
+    if (metaObj.forceEngine === 'nvidia' && config.nvidia?.enabled) {
       console.log("[OCR] FORCING NVIDIA NIM Vision due to metadata flag...");
-      return await runNvidiaVision(processedPaths, 1, 'meta/llama-3.2-90b-vision-instruct');
+      const nvidiaResult = await runNvidiaVision(processedPaths, 1, 'meta/llama-3.2-11b-vision-instruct');
+      return {
+        text: nvidiaResult.structuredData?.products?.[0]?.raw_text_transcript || nvidiaResult.text,
+        engine: "nvidia",
+        confidenceAvg: nvidiaResult.confidence,
+        geminiStructuredData: nvidiaResult.structuredData,
+        structuredData: nvidiaResult.structuredData,
+        _fontMetrics: [],
+        _jsonText: nvidiaResult.text
+      };
     }
     
-    // 1. Attempt Gemini 2.5 Flash First (Fastest)
+    // 1. Attempt Gemini Flash Latest First (Active quota, extremely fast)
     if (config.gemini?.enabled && config.gemini?.apiKey) {
-      console.log("[OCR] Attempting Gemini 2.5 Flash...");
+      console.log("[OCR] Attempting Gemini Flash Latest...");
       try {
-        geminiResult = await runGeminiVision(processedPaths, 1, 'gemini-2.5-flash');
+        const geminiResult = await runGeminiVision(processedPaths, 1, 'gemini-flash-latest');
         return {
           text: geminiResult.structuredData?.products?.[0]?.raw_text_transcript || geminiResult.text,
           engine: "gemini",
           confidenceAvg: geminiResult.confidence,
           geminiStructuredData: geminiResult.structuredData,
+          structuredData: geminiResult.structuredData,
           _fontMetrics: [],
           _jsonText: geminiResult.text
         };
       } catch (geminiErr) {
-        console.warn("[OCR] Gemini Flash failed: " + geminiErr.message); 
+        console.warn("[OCR] Gemini Flash Latest failed: " + geminiErr.message); 
         geminiErrStr = geminiErr.message;
       }
     }
     
-    // 2. Attempt Groq as Fallback (Llama/Qwen Vision)
-    if (config.groq?.enabled && config.groq?.apiKey) {
-      console.log("[OCR] Attempting Groq Vision Fallback...");
-      try {
-        // llama-3.2-90b-vision-preview is usually the best Groq vision model for OCR, but fallback to whatever was configured
-        groqResult = await runGroqVision(processedPaths, 1, 'llama-3.2-90b-vision-preview');
-        return {
-          text: groqResult.structuredData?.products?.[0]?.raw_text_transcript || groqResult.text,
-          engine: "groq",
-          confidenceAvg: groqResult.confidence,
-          geminiStructuredData: groqResult.structuredData, 
-          _fontMetrics: [],
-          _jsonText: groqResult.text
-        };
-      } catch (groqErr) {
-        console.warn("[OCR] Groq failed: " + groqErr.message); 
-        groqErrStr = groqErr.message;
-      }
-    }
-
-    // 3. Attempt NVIDIA NIM Fallback (Free meta/llama-3.2-90b-vision-instruct)
-    if (config.nvidia?.enabled && config.nvidia?.apiKey) {
-      console.log("[OCR] Attempting NVIDIA NIM Vision Fallback...");
-      try {
-        const nvidiaResult = await runNvidiaVision(processedPaths, 1, 'meta/llama-3.2-90b-vision-instruct');
-        return nvidiaResult;
-      } catch (nvidiaErr) {
-        console.warn("[OCR] NVIDIA NIM failed: " + nvidiaErr.message); 
-      }
-    }
-
-    // 4. Last Resort API: Attempt Gemini 2.5 Pro (Slower, higher rate limit capacity)
+    // 2. Attempt Gemini Flash Lite Fallback
     if (config.gemini?.enabled && config.gemini?.apiKey) {
-      console.log("[OCR] Attempting Gemini 2.5 Pro (Last Resort)...");
+      console.log("[OCR] Attempting Gemini Flash Lite Fallback...");
       try {
-        geminiResult = await runGeminiVision(processedPaths, 1, 'gemini-2.5-pro');
+        const geminiResult = await runGeminiVision(processedPaths, 1, 'gemini-flash-lite-latest');
         return {
           text: geminiResult.structuredData?.products?.[0]?.raw_text_transcript || geminiResult.text,
           engine: "gemini",
           confidenceAvg: geminiResult.confidence,
           geminiStructuredData: geminiResult.structuredData,
+          structuredData: geminiResult.structuredData,
           _fontMetrics: [],
           _jsonText: geminiResult.text
         };
       } catch (geminiErr2) {
-        console.warn("[OCR] Gemini Pro failed: " + geminiErr2.message); 
+        console.warn("[OCR] Gemini Flash Lite failed: " + geminiErr2.message); 
+      }
+    }
+
+    // 3. Attempt NVIDIA NIM Fallback (meta/llama-3.2-11b-vision-instruct)
+    if (config.nvidia?.enabled && config.nvidia?.apiKey) {
+      console.log("[OCR] Attempting NVIDIA NIM Vision Fallback...");
+      try {
+        const nvidiaResult = await runNvidiaVision(processedPaths, 1, 'meta/llama-3.2-11b-vision-instruct');
+        return {
+          text: nvidiaResult.structuredData?.products?.[0]?.raw_text_transcript || nvidiaResult.text,
+          engine: "nvidia",
+          confidenceAvg: nvidiaResult.confidence,
+          geminiStructuredData: nvidiaResult.structuredData,
+          structuredData: nvidiaResult.structuredData,
+          _fontMetrics: [],
+          _jsonText: nvidiaResult.text
+        };
+      } catch (nvidiaErr) {
+        console.warn("[OCR] NVIDIA NIM failed: " + nvidiaErr.message); 
       }
     }
     

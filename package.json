@@ -1,5 +1,5 @@
 {
-  "name": "satyalabel-root",
+  "name": "metrolens-root",
   "private": true,
   "scripts": {
     "build": "npm install --prefix frontend && npm --prefix frontend run build",
