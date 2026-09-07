@@ -148,7 +148,7 @@ export default function LandingPage() {
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center gap-4 mb-8 w-full sm:w-auto">
               <Link
-                href="/upload"
+                href={isAuthenticated ? "/upload" : "/login"}
                 className="w-full sm:w-auto text-center inline-flex items-center justify-center gap-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm px-7 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all"
               >
                 <Scan size={18} />
@@ -164,21 +164,13 @@ export default function LandingPage() {
                   <span>Enforcement Command Centre</span>
                 </Link>
               ) : (
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <Link
-                    href="/rules"
-                    className="w-full sm:w-auto text-center inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all shadow-sm"
-                  >
-                    <BookOpen size={16} className="text-slate-500" />
-                    <span>Browse Statutory Rules</span>
-                  </Link>
-                  <Link
-                    href="/login"
-                    className="hidden sm:inline-flex items-center justify-center text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-3 py-2 transition-colors"
-                  >
-                    Officer Sign In &rarr;
-                  </Link>
-                </div>
+                <Link
+                  href="/rules"
+                  className="w-full sm:w-auto text-center inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-sm px-6 py-3.5 rounded-xl transition-all shadow-sm"
+                >
+                  <BookOpen size={16} className="text-slate-500" />
+                  <span>Browse Statutory Rules</span>
+                </Link>
               )}
             </div>
 
