@@ -10,7 +10,7 @@ import {
 import {
   Shield, ScanLine, Upload,
   CheckCircle2, AlertTriangle, HelpCircle, MinusCircle, EyeOff,
-  Sun, Moon, Zap, Clock, FileSearch, Scale, Layers, Image as ImageIcon,
+  Zap, Clock, FileSearch, Scale, Layers, Image as ImageIcon,
   ChevronDown, FileText, Monitor, Server, Database, Eye, Check, X,
   FileCheck, Cpu, Code, Scan, ArrowRight, BookOpen, Gauge, ShieldCheck, CheckCircle, ChevronRight,
   Calculator, Maximize2, Sliders, ExternalLink, Camera
@@ -31,35 +31,6 @@ function useReducedMotion() {
     return () => mq.removeEventListener('change', handler);
   }, []);
   return reduced;
-}
-
-function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className="w-9 h-9" />;
-  const isDark = resolvedTheme === 'dark';
-  return (
-    <button
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className="w-9 h-9 flex items-center justify-center rounded-lg border transition-colors duration-200"
-      style={{
-        borderColor: 'var(--color-border)',
-        backgroundColor: 'var(--color-surface)',
-        color: 'var(--color-text-secondary)',
-      }}
-      aria-label="Toggle theme"
-    >
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div key={isDark ? 'sun' : 'moon'}
-          initial={{ rotate: -30, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }}
-          exit={{ rotate: 30, opacity: 0 }} transition={{ duration: 0.2 }}
-        >
-          {isDark ? <Sun size={16} /> : <Moon size={16} />}
-        </motion.div>
-      </AnimatePresence>
-    </button>
-  );
 }
 
 function GrainCanvas() {
@@ -1289,7 +1260,6 @@ export default function LandingPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <ThemeToggle />
           <a href="#system-flow" className="text-[13px] font-medium text-white/85 hover:text-white transition-colors hidden sm:block">
             System Flow
           </a>

@@ -1,10 +1,9 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
 import NavBar from '@/components/NavBar';
 import { triggerHaptic } from '@/utils/haptics';
-import { LogOut, Moon, Sun, Monitor, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { LogOut, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 const RULES_VERSION = 'v1.4 — LM(PC) Rules 2011, Amendment 2022';
@@ -13,7 +12,6 @@ const BUILD_DATE    = '2026-09-04';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const [mounted, setMounted]       = useState(false);
   const [showAbout, setShowAbout]   = useState(false);
   const [email, setEmail]           = useState('');
