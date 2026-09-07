@@ -1238,16 +1238,13 @@ export default function LandingPage() {
 
       {/* Navigation Bar */}
       <nav className="w-full flex items-center justify-between px-6 py-3.5 md:px-12 relative z-20 sticky top-0 bg-[#0B1F3A] dark:bg-[#071324] shadow-[0_4px_20px_rgba(11,31,58,0.35)] border-b border-blue-900/40 transition-colors duration-300">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-full border border-white/20 bg-white/10 flex items-center justify-center shadow-sm relative shrink-0">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="text-white z-10">
-              <path d="M12 3v18"></path>
-              <path d="M3 8h18"></path>
-              <path d="M5 8v6a2 2 0 0 0 4 0V8"></path>
-              <path d="M15 8v6a2 2 0 0 0 4 0V8"></path>
-              <path d="M8 21h8"></path>
-              <circle cx="12" cy="3" r="1"></circle>
-            </svg>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center shrink-0 mr-1">
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" 
+              alt="State Emblem of India" 
+              className="h-9 w-auto object-contain brightness-0 invert opacity-90"
+            />
           </div>
           <div className="flex flex-col justify-center">
             <span className="text-[10px] font-sans tracking-[0.06em] text-white/80 uppercase leading-none mb-1 font-medium">
