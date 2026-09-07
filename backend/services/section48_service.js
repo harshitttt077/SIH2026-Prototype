@@ -146,31 +146,47 @@ function generateSection48Notice({
     coverageFactor_k: 2
   };
 
-  const violationsList = [
-    {
-      charge_no: 1,
-      provision_violated: 'Section 36(1) read with Rule 7(2) Table I & Rule 7(3)',
-      short_title: 'Undersized Numeral Declaration (Cap Height Floor Violation)',
-      evidence_finding: ilacSummary.canonicalString,
-      standard_used: 'ISO/IEC 17025:2017 Cl. 7.1.3 & ILAC G8:09/2019 Guard-Banding',
-      tolerance_limit_mm: ilacSummary.toleranceLimit_TL,
-      measured_value_mm: `${ilacSummary.measuredMm} ± ${ilacSummary.uncertainty_U} mm (k=2)`
-    },
-    {
-      charge_no: 2,
-      provision_violated: 'Rule 8 (Clear Space Placement)',
-      short_title: 'Inadequate Clearance Surrounding Net Quantity',
-      evidence_finding: inspectionData.rule_8_free_space?.detail || 'Net quantity margin clearance is less than twice numeral height horizontally.',
-      standard_used: 'Rule 8 mandatory geometry'
-    },
-    {
-      charge_no: 3,
-      provision_violated: 'Rule 9(1)(b) (Conspicuous Contrast Mandate)',
-      short_title: 'Insufficient Numeric Contrast Ratio',
-      evidence_finding: inspectionData.rule_9_contrast?.detail || 'Numerals fail minimum 4.5:1 luminance contrast requirement against background packaging.',
-      standard_used: 'ISO 9241-306 / WCAG Relative Luminance Ratio'
-    }
-  ];
+  const rawViolations = inspectionData.violations || [];
+  const activeViolations = rawViolations.filter(v => {
+    const s = String(v.status).toUpperCase();
+    return s !== 'PASS' && s !== 'NOT APPLICABLE';
+  });
+
+  const violationsList = activeViolations.length > 0
+    ? activeViolations.map((v, i) => ({
+        charge_no: i + 1,
+        provision_violated: v.rule_id || v.ruleId || 'Section 36(1)',
+        short_title: v.rule_title || v.ruleTitle || 'Legal Metrology Label Non-Compliance',
+        evidence_finding: v.detail || v.detail_text || 'Statutory declaration non-compliant during automated verification.',
+        standard_used: 'Legal Metrology (Packaged Commodities) Rules, 2011 (as amended 2026)',
+        tolerance_limit_mm: v.required_value || null,
+        measured_value_mm: v.detected_value || null
+      }))
+    : [
+        {
+          charge_no: 1,
+          provision_violated: 'Section 36(1) read with Rule 7(2) Table I & Rule 7(3)',
+          short_title: 'Undersized Numeral Declaration (Cap Height Floor Violation)',
+          evidence_finding: ilacSummary.canonicalString,
+          standard_used: 'ISO/IEC 17025:2017 Cl. 7.1.3 & ILAC G8:09/2019 Guard-Banding',
+          tolerance_limit_mm: ilacSummary.toleranceLimit_TL,
+          measured_value_mm: `${ilacSummary.measuredMm} ± ${ilacSummary.uncertainty_U} mm (k=2)`
+        },
+        {
+          charge_no: 2,
+          provision_violated: 'Rule 8 (Clear Space Placement)',
+          short_title: 'Inadequate Clearance Surrounding Net Quantity',
+          evidence_finding: inspectionData.rule_8_free_space?.detail || 'Net quantity margin clearance is less than twice numeral height horizontally.',
+          standard_used: 'Rule 8 mandatory geometry'
+        },
+        {
+          charge_no: 3,
+          provision_violated: 'Rule 9(1)(b) (Conspicuous Contrast Mandate)',
+          short_title: 'Insufficient Numeric Contrast Ratio',
+          evidence_finding: inspectionData.rule_9_contrast?.detail || 'Numerals fail minimum 4.5:1 luminance contrast requirement against background packaging.',
+          standard_used: 'ISO 9241-306 / WCAG Relative Luminance Ratio'
+        }
+      ];
 
   return {
     statutory_form: 'FORM FOR COMPOUNDING NOTICE UNDER SECTION 48 OF LEGAL METROLOGY ACT, 2009',
@@ -178,18 +194,18 @@ function generateSection48Notice({
     issuance_date: dateFormatted,
     compoundability_check: compoundability,
     authority: {
-      officer_name: officerDetails.name || 'P. K. Sharma',
+      officer_name: officerDetails.name || 'Authorized Legal Metrology Officer',
       badge_number: officerDetails.badge || 'LMO-DL-4819',
       jurisdiction: officerDetails.circle || 'Circle IV (South-East), New Delhi',
       rank: statutoryAuth.title,
       statutory_power_basis: statutoryAuth.statutory_basis
     },
     offender: {
-      firm_name: offenderDetails.firm_name || 'Apex Confectioneries & Foods Ltd.',
-      representative: offenderDetails.representative || 'Director / Managing Partner',
-      address: offenderDetails.address || 'Plot 42, Okhla Industrial Area Phase-III, New Delhi 110020',
-      gstin: offenderDetails.gstin || '07AABCA9921F1Z8',
-      commodity_seized: offenderDetails.commodity || 'Crispy Potato Chips 85g Pack'
+      firm_name: offenderDetails.firm_name || offenderDetails.manufacturer_name || 'Declared Packaging Entity',
+      representative: offenderDetails.representative || 'Director / Managing Partner / Authorized Signatory',
+      address: offenderDetails.address || offenderDetails.manufacturer_address || 'Address declared on retail package',
+      gstin: offenderDetails.gstin || 'Not Declared on Pack',
+      commodity_seized: offenderDetails.commodity || offenderDetails.product_name || 'Packaged Commodity'
     },
     evidence_chain_of_custody: {
       original_image_sha256: imageHash,
@@ -212,9 +228,80 @@ function generateSection48Notice({
   };
 }
 
+// ─── JAN VISHWAS ACT 2026 FORM IN-1 STATUTORY IMPROVEMENT NOTICE ─────────────
+function generateJanVishwasNotice({
+  inspectionData = {},
+  offenderDetails = {},
+  officerDetails = {}
+} = {}) {
+  const noticeNo = `DOCA/LM/IN-1/${new Date().getFullYear()}/${Math.floor(100000 + Math.random() * 900000)}`;
+  const inspectionDate = inspectionData.timestamp || new Date().toISOString();
+  const dateFormatted = new Date(inspectionDate).toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  const cureDeadline = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  const rawViolations = inspectionData.violations || [];
+  const activeViolations = rawViolations.filter(v => {
+    const s = String(v.status).toUpperCase();
+    return s !== 'PASS' && s !== 'NOT APPLICABLE';
+  });
+
+  const violationsList = activeViolations.length > 0 ? activeViolations.map((v, i) => ({
+    item_no: i + 1,
+    rule_id: v.rule_id || v.ruleId || 'Rule 6(1)',
+    rule_title: v.rule_title || v.ruleTitle || 'Mandatory Declaration Non-Conformance',
+    finding: v.detail || v.detail_text || 'Non-compliance detected during automated optical verification',
+    statutory_mandate: 'Legal Metrology (Packaged Commodities) Rules, 2011 (as amended 2026)',
+    action_required: 'Rectify package labeling / replace existing stock or file formal compliance affidavit.'
+  })) : [
+    {
+      item_no: 1,
+      rule_id: 'Rule 7(2) Table I',
+      rule_title: 'Undersized Numeral Declaration (Height Floor Non-Conformance)',
+      finding: 'Measurement indicates numeral height below statutory floor specified in Table I.',
+      statutory_mandate: 'Rule 7(2) Table I / GSR 629(E)',
+      action_required: 'Increase numeral font size to comply with statutory height floor.'
+    }
+  ];
+
+  return {
+    statutory_form: 'FORM IN-1: STATUTORY IMPROVEMENT NOTICE',
+    statutory_authority: 'Jan Vishwas (Amendment of Provisions) Act, 2023 / Legal Metrology Act, 2009',
+    notice_number: noticeNo,
+    issuance_date: dateFormatted,
+    statutory_cure_window_days: 15,
+    cure_deadline: cureDeadline,
+    recipient: {
+      firm_name: offenderDetails.firm_name || offenderDetails.manufacturer_name || 'Declared Packaging Entity',
+      address: offenderDetails.address || offenderDetails.manufacturer_address || 'Address declared on retail package',
+      gstin: offenderDetails.gstin || 'Not Declared on Pack',
+      commodity: offenderDetails.commodity || offenderDetails.product_name || 'Packaged Commodity'
+    },
+    authority: {
+      officer_name: officerDetails.name || 'Authorized Legal Metrology Officer',
+      badge_number: officerDetails.badge || 'LMO-DL-2026',
+      jurisdiction: officerDetails.circle || 'Circle IV (South-East), New Delhi',
+      rank: officerDetails.rank || 'Controller of Legal Metrology'
+    },
+    violations: violationsList,
+    statutory_directives: [
+      '1. Take immediate corrective action to rectify the non-compliant labeling on all subsequent production runs.',
+      '2. Quarantine or apply statutory over-stickers (if approved by the Controller) to current retail inventory.',
+      `3. Submit a written Compliance Undertaking (Form CU-1) to the undersigned officer within fifteen (15) calendar days (on or before ${cureDeadline}).`,
+      '4. If rectification is not completed within 15 days, compounding proceedings under Section 48 or prosecution under Section 36 shall be initiated without further notice.'
+    ],
+    legal_immunity_clause: 'In accordance with the Jan Vishwas Act 2026 provisions, compliance within the 15-day statutory cure window discharges all liability for the identified first-instance technical non-conformances without criminal record or penalty.'
+  };
+}
+
 module.exports = {
   STATUTORY_JURISDICTION,
   MOCK_COMPOUNDING_REGISTRY,
   checkSection48Compoundability,
-  generateSection48Notice
+  generateSection48Notice,
+  generateJanVishwasNotice
 };

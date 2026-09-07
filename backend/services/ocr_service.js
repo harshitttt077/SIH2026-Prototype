@@ -57,7 +57,11 @@ async function preprocessImage(imagePath) {
 // ─── JSON SCHEMA PROMPT ───────────────────────────────────────────────────────
 const SCHEMA_HINT = JSON.stringify({
   is_valid_packaging: true,
+  detected_subject: "Description of what is visible in the image",
   rejection_reason: null,
+  required_elements: ["Physical retail package or compliance label", "Rule 6 mandatory declarations (MRP, Net Qty, Mfg Date, Packer Address)"],
+  is_partial_panel: false,
+  advisory_note: null,
   products: [{
     raw_text_transcript: "Literal transcription of all readable text on the package",
     product_name: "string",
@@ -83,19 +87,31 @@ const SCHEMA_HINT = JSON.stringify({
 const STRUCTURED_PROMPT = `You are the core "AI Brain" of a Legal Metrology enforcement system (Department of Consumer Affairs, Government of India).
 Your job is to inspect retail packaged goods under the Legal Metrology (Packaged Commodities) Rules, 2011.
 
-STEP 1: IMAGE VALIDATION (CRITICAL QUALITY GATE)
-First, verify whether the image actually depicts a consumer packaged commodity (box, bottle, pouch, jar, can, packet, retail carton, or physical product label).
-- IF the image contains a human, person, face, selfie, animal, natural landscape, room, furniture, vehicle, computer screenshot of unrelated apps/text, or any non-packaging subject:
+STEP 1: INGESTION QUALITY GATE (MANDATORY CHECK)
+Determine if this image actually depicts a consumer packaged commodity (box, bottle, pouch, jar, can, packet, retail carton, or physical product label).
+- IF NOT PACKAGING (e.g., human, person, face, selfie, animal, natural landscape, room, furniture, vehicle, computer screenshot of unrelated apps/text):
   You MUST return:
   "is_valid_packaging": false,
-  "rejection_reason": "Image contains a person or non-packaging subject. Legal Metrology inspection requires a clear photo of a packaged commodity or compliance label.",
+  "detected_subject": "Human Face / Living Subject / Non-packaging scene",
+  "rejection_reason": "No consumer packaged commodity or retail compliance label detected in this image.",
+  "required_elements": [
+    "Physical retail package (box, pouch, bottle, can, carton) or label",
+    "Rule 6(1)(d) Maximum Retail Price (MRP) incl. of all taxes",
+    "Rule 6(1)(c) Net Quantity with metric unit (g, kg, ml, L)",
+    "Rule 6(1)(a) Manufacturer/Packer Name & Complete Address with PIN",
+    "Rule 6(1)(f) Month and Year of Manufacture/Packing"
+  ],
   "products": []
-  Do NOT invent or hallucinate product details on non-packaging images!
+  Do NOT guess, hallucinate, or fabricate product declarations on non-packaging images!
 
-STEP 2: DECLARATION EXTRACTION (ONLY IF VALID PACKAGING)
-If the image is a valid packaged commodity or retail label:
+STEP 2: PREVENT FALSE POSITIVES ON PACKAGING
+If the image is a valid packaged commodity or label:
 - Set "is_valid_packaging": true
-- Set "rejection_reason": null
+- Set "detected_subject": "Packaged commodity label"
+- If only the FRONT Principal Display Panel is visible (and MRP/Date/Address are typically on the back):
+  Set "is_partial_panel": true and "advisory_note": "Front Principal Display Panel detected. Reverse information panel should also be inspected for batch/MRP."
+- For edible oils: look for both volume and weight declarations (Fourth Schedule Item 11).
+- For items <= 10g or <= 10ml: note that Unit Sale Price is exempt under Rule 26.
 - Extract literal text accurately into the products array. If a declaration is missing from the label, use null.
 - In 'raw_text_transcript', provide the exact text visible on the package.
 - Output MUST strictly be valid JSON conforming to the schema.`;
@@ -158,7 +174,15 @@ async function runGeminiVision(imagePaths, modelIndex = 0) {
           engine: 'gemini',
           structuredData: {
             is_valid_packaging: false,
+            detected_subject: rawParsed.detected_subject || 'Living Person / Non-packaging scene',
             rejection_reason: rawParsed.rejection_reason || 'Image contains a person or non-packaging subject. Not a packaged commodity.',
+            required_elements: rawParsed.required_elements || [
+              'Physical retail package or label',
+              'Rule 6(1)(d) MRP incl. of all taxes',
+              'Rule 6(1)(c) Net Quantity with metric unit',
+              'Rule 6(1)(a) Manufacturer Name & Address with PIN',
+              'Rule 6(1)(f) Month and Year of Manufacture'
+            ],
             products: []
           }
         };
@@ -168,7 +192,13 @@ async function runGeminiVision(imagePaths, modelIndex = 0) {
       if (!products || products.length === 0) {
         products = [{ product_name: rawParsed.product_name || 'Packaged Commodity', raw_text_transcript: cleaned }];
       }
-      structuredData = { is_valid_packaging: true, products };
+      structuredData = {
+        is_valid_packaging: true,
+        detected_subject: rawParsed.detected_subject || 'Packaged commodity label',
+        is_partial_panel: rawParsed.is_partial_panel || false,
+        advisory_note: rawParsed.advisory_note || null,
+        products
+      };
     } catch (parseErr) {
       console.warn('[OCR] Gemini JSON parse warning:', parseErr.message);
       // Robust regex salvage if JSON is slightly truncated
@@ -287,7 +317,15 @@ async function runNvidiaVision(imagePaths) {
           engine: 'nvidia',
           structuredData: {
             is_valid_packaging: false,
+            detected_subject: rawParsed.detected_subject || 'Living Person / Non-packaging scene',
             rejection_reason: rawParsed.rejection_reason || 'Image contains a person or non-packaging subject. Not a packaged commodity.',
+            required_elements: rawParsed.required_elements || [
+              'Physical retail package or label',
+              'Rule 6(1)(d) MRP incl. of all taxes',
+              'Rule 6(1)(c) Net Quantity with metric unit',
+              'Rule 6(1)(a) Manufacturer Name & Address with PIN',
+              'Rule 6(1)(f) Month and Year of Manufacture'
+            ],
             products: []
           }
         };
@@ -297,7 +335,13 @@ async function runNvidiaVision(imagePaths) {
       if (!products || products.length === 0) {
         products = [{ product_name: rawParsed.product_name || 'Packaged Commodity', raw_text_transcript: cleaned }];
       }
-      structuredData = { is_valid_packaging: true, products };
+      structuredData = {
+        is_valid_packaging: true,
+        detected_subject: rawParsed.detected_subject || 'Packaged commodity label',
+        is_partial_panel: rawParsed.is_partial_panel || false,
+        advisory_note: rawParsed.advisory_note || null,
+        products
+      };
     } catch (parseErr) {
       console.warn('[OCR] NVIDIA JSON parse warning:', parseErr.message);
       structuredData = { is_valid_packaging: true, products: [{ product_name: 'Packaged Commodity', raw_text_transcript: cleaned }] };

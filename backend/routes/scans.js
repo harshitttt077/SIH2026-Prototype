@@ -67,7 +67,7 @@ const { validateCompliance } = require('../services/rules_engine');
 const { generateReport, generateCSV } = require('../services/report_service');
 const { generateAIAuditorAnalysis } = require('../services/auditor_service');
 const { runFullMetrologyAnalysis, DEFAULT_REFERENCE_STANDARD, calculatePdpArea, getMinimumRequiredHeight, calculateUncertaintyBudget, evaluateConformityILAC } = require('../services/metrology_engine');
-const { checkSection48Compoundability, generateSection48Notice, STATUTORY_JURISDICTION } = require('../services/section48_service');
+const { checkSection48Compoundability, generateSection48Notice, generateJanVishwasNotice, STATUTORY_JURISDICTION } = require('../services/section48_service');
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -129,8 +129,15 @@ async function runBatchPipeline(batch, imagePath, metadata = {}) {
 
     // Quality gate: check if AI identified this as non-packaging (e.g. human, face, selfie, animal, random photo)
     if (ocrResult.geminiStructuredData?.is_valid_packaging === false) {
-      const rejectMsg = ocrResult.geminiStructuredData.rejection_reason || 'Image is not a packaged commodity or product label.';
-      await batch.update({ status: 'failed', errorMessage: rejectMsg });
+      const g = ocrResult.geminiStructuredData;
+      const rejectMsg = g.rejection_reason || 'No consumer packaged commodity or retail label detected in image.';
+      const detected = g.detected_subject || 'Living Subject / Non-packaging scene';
+      const required = (g.required_elements && g.required_elements.length) 
+        ? g.required_elements.join(' • ') 
+        : 'Physical retail package or label with Rule 6 declarations (MRP, Net Quantity, Mfg Date, Packer Address with PIN)';
+      
+      const combinedError = `${rejectMsg}\n• Detected: ${detected}\n• Required: ${required}`;
+      await batch.update({ status: 'failed', errorMessage: combinedError });
       emitProgress(batch.id, 5, `Inspection Rejected: ${rejectMsg}`);
       return;
     }
@@ -143,9 +150,9 @@ async function runBatchPipeline(batch, imagePath, metadata = {}) {
         ((!rawProductData.product_name || rawProductData.product_name === 'Packaged Commodity (Offline Inspection)') &&
          !rawProductData.mrp && !rawProductData.net_quantity &&
          (!ocrResult.text || ocrResult.text.trim().length < 15))) {
-      const emptyMsg = 'No consumer packaging or readable declarations detected in the image. Please upload a clear photo of a packaged product or compliance label.';
+      const emptyMsg = 'Quality Gate Rejection: Zero mandatory declarations detected in this image.\n• Detected: Unreadable text or low-contrast surface.\n• Required: Clear photo of retail package showing Rule 6 declarations (MRP, Net Quantity, Manufacturer Address).';
       await batch.update({ status: 'failed', errorMessage: emptyMsg });
-      emitProgress(batch.id, 5, `Inspection Rejected: ${emptyMsg}`);
+      emitProgress(batch.id, 5, `Inspection Rejected: No declarations found`);
       return;
     }
     
@@ -914,13 +921,13 @@ router.post('/section48-notice', (req, res) => {
     // If inspectionData is not passed, generate baseline metrology analysis
     const inspection = inspectionData || runFullMetrologyAnalysis(req.body);
     const offender = offenderDetails || {
-      firm_name: req.body.manufacturer_name || 'Apex Confectioneries & Foods Ltd.',
-      gstin: req.body.gstin || '07AABCA9921F1Z8',
-      address: req.body.manufacturer_address || 'Plot 42, Okhla Industrial Area Phase-III, New Delhi 110020',
-      commodity: req.body.product_name || 'Crispy Potato Chips 85g Pack'
+      firm_name: req.body.manufacturer_name || 'Declared Packaging Entity',
+      gstin: req.body.gstin || 'Not Declared on Pack',
+      address: req.body.manufacturer_address || 'Address declared on retail package',
+      commodity: req.body.product_name || 'Packaged Commodity'
     };
     const officer = officerDetails || {
-      name: 'P. K. Sharma',
+      name: 'Authorized Legal Metrology Officer',
       badge: 'LMO-DL-4819',
       circle: 'Circle IV (South-East), New Delhi',
       rank: 'Controller',
@@ -937,6 +944,38 @@ router.post('/section48-notice', (req, res) => {
     ok(res, notice);
   } catch (err) {
     fail(res, 500, 'NOTICE_GENERATION_FAILED', err.message);
+  }
+});
+
+// ─── POST /api/v1/scans/janvishwas-notice ────────────────────────────────────
+// Generates Jan Vishwas Act 2026 Form IN-1 Improvement Notice (15-day statutory cure period)
+router.post('/janvishwas-notice', (req, res) => {
+  try {
+    const { inspectionData, offenderDetails, officerDetails } = req.body;
+    
+    const inspection = inspectionData || runFullMetrologyAnalysis(req.body);
+    const offender = offenderDetails || {
+      firm_name: req.body.manufacturer_name || 'Declared Packaging Entity',
+      gstin: req.body.gstin || 'Not Declared on Pack',
+      address: req.body.manufacturer_address || 'Address declared on retail package',
+      commodity: req.body.product_name || 'Packaged Commodity'
+    };
+    const officer = officerDetails || {
+      name: 'Authorized Legal Metrology Officer',
+      badge: 'LMO-DL-2026',
+      circle: 'Circle IV (South-East), New Delhi',
+      rank: 'Controller of Legal Metrology'
+    };
+
+    const notice = generateJanVishwasNotice({
+      inspectionData: inspection,
+      offenderDetails: offender,
+      officerDetails: officer
+    });
+
+    ok(res, notice);
+  } catch (err) {
+    fail(res, 500, 'JANVISHWAS_NOTICE_GENERATION_FAILED', err.message);
   }
 });
 
@@ -1086,33 +1125,51 @@ function formatScanSummary(scan) {
       created_at: scan.reports[0].created_at,
     } : null,
     // Metrology & Measurement Science Analysis (SIH26034 core differentiator)
-    metrology: runFullMetrologyAnalysis({
+    metrology: scan.extractedFields ? runFullMetrologyAnalysis({
       imageHash: scan.imageHash || require('crypto').createHash('sha256').update(String(scan.id)).digest('hex'),
-      netQuantity: scan.extractedFields?.net_quantity || '85 g',
-      mrp: scan.extractedFields?.mrp || 85.00,
+      netQuantity: scan.extractedFields?.net_quantity || '',
+      mrp: scan.extractedFields?.mrp ? parseFloat(scan.extractedFields.mrp) : 0,
       category: scan.product?.category || 'general',
       packDimensions: { width_cm: 14.5, height_cm: 20.0, depth_cm: 4.0, shape: 'rectangular' },
       isEmbossed: false,
-    }),
-    // Section 48 Notice with Section 50 Evidentiary Chain
+    }) : null,
+    // Section 48 Compounding Notice with Section 50 Evidentiary Chain
     section48_notice: generateSection48Notice({
-      inspectionData: runFullMetrologyAnalysis({
-        imageHash: scan.imageHash || require('crypto').createHash('sha256').update(String(scan.id)).digest('hex'),
-        netQuantity: scan.extractedFields?.net_quantity || '85 g',
-        mrp: scan.extractedFields?.mrp || 85.00,
-        category: scan.product?.category || 'general',
-      }),
+      inspectionData: {
+        violations: scan.violations || [],
+        timestamp: scan.created_at,
+        image_hash_sha256: scan.imageHash
+      },
       offenderDetails: {
-        firm_name: scan.extractedFields?.manufacturer_name || scan.product?.brandName || 'Apex Confectioneries & Foods Ltd.',
-        gstin: scan.extractedFields?.gstin || '07AABCA9921F1Z8',
-        address: scan.extractedFields?.manufacturer_address || 'Plot 42, Okhla Industrial Area Phase-III, New Delhi 110020',
-        commodity: scan.product?.productName || 'Packaged Commodity'
+        firm_name: scan.extractedFields?.manufacturer_name || scan.product?.brandName || scan.product?.productName || 'Declared Packaging Entity',
+        gstin: scan.extractedFields?.gstin || 'Not Declared on Pack',
+        address: scan.extractedFields?.manufacturer_address || 'Address declared on retail package',
+        commodity: scan.product?.productName || scan.extractedFields?.product_name || 'Packaged Commodity'
       },
       officerDetails: {
         name: 'Authorized Legal Metrology Officer',
         badge: 'LMO-DL-2026',
         rank: 'Controller',
         circle: 'Circle IV, New Delhi'
+      }
+    }),
+    // Jan Vishwas Act 2026 Form IN-1 Improvement Notice (15-day cure window)
+    janvishwas_notice: generateJanVishwasNotice({
+      inspectionData: {
+        violations: scan.violations || [],
+        timestamp: scan.created_at
+      },
+      offenderDetails: {
+        firm_name: scan.extractedFields?.manufacturer_name || scan.product?.brandName || scan.product?.productName || 'Declared Packaging Entity',
+        gstin: scan.extractedFields?.gstin || 'Not Declared on Pack',
+        address: scan.extractedFields?.manufacturer_address || 'Address declared on retail package',
+        commodity: scan.product?.productName || scan.extractedFields?.product_name || 'Packaged Commodity'
+      },
+      officerDetails: {
+        name: 'Authorized Legal Metrology Officer',
+        badge: 'LMO-DL-2026',
+        circle: 'Circle IV, New Delhi',
+        rank: 'Controller of Legal Metrology'
       }
     }),
     created_at: scan.created_at,

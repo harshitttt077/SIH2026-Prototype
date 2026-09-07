@@ -1,6 +1,7 @@
 "use client";
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 
@@ -103,22 +104,14 @@ export default function Login() {
 
       {/* Glass panel */}
       <div className="w-full max-w-[440px] glass backdrop-blur-3xl border border-border/50 shadow-2xl rounded-[32px] p-8 sm:p-12 z-10 animate-fade-in relative">
-        {/* Back navigation */}
-        <button
-          type="button"
-          onClick={() => {
-            if (typeof window !== 'undefined' && window.history.length > 1) {
-              router.back();
-            } else {
-              router.push('/');
-            }
-          }}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors mb-6 relative z-10 py-1.5 px-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 border border-transparent hover:border-border/40 w-fit -ml-2 group cursor-pointer"
-          aria-label="Go back"
+        {/* Return to National Portal */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors mb-6 relative z-10 py-2 px-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-border/40 hover:border-border w-fit -ml-1 group"
         >
           <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
-          <span>Back</span>
-        </button>
+          <span>← Return to National Portal</span>
+        </Link>
 
         {/* Logo */}
         <div className="flex items-center gap-4 mb-8 relative z-10">

@@ -274,6 +274,10 @@ function checkManufacturerAddress(fields) {
   const val = fields.manufacturer_address || fields.packer_address || fields.importer_address;
 
   if (!isPresent(val)) {
+    if (fields.is_partial_panel) {
+      return review(R, T, f, 'low',
+        'Manufacturer address not detected on captured panel. Single/partial panel submitted — address may be located on reverse panel. Officer review advised.');
+    }
     return pnoc(R, T, f, 'high',
       'Complete address of the manufacturer, packer, or importer is absent. ' +
       'A complete address is mandatory under Rule 6 read with Rule 10.');
@@ -511,6 +515,10 @@ function checkMRP(fields) {
   const f = 'customer_care';
 
   if (!isPresent(fields.customer_care)) {
+    if (fields.is_partial_panel) {
+      return review(R, T, f, 'low',
+        'Consumer care contact details not detected on captured panel. Single/partial panel submitted — consumer care is typically located on reverse panel. Officer review advised.');
+    }
     return pnoc(R, T, f, 'medium',
       'Consumer care contact details (helpline phone number or email address) are not declared on the label. ' +
       'This is mandatory under Rule 6.');
