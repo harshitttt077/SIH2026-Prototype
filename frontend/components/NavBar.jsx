@@ -11,14 +11,17 @@ export default function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    setEmail(sessionStorage.getItem('email') || 'officer@gov.in');
-    setRole(sessionStorage.getItem('role') || '');
+    setEmail(sessionStorage.getItem('email') || localStorage.getItem('email') || 'officer@gov.in');
+    setRole(sessionStorage.getItem('role') || localStorage.getItem('role') || '');
   }, []);
 
   const handleLogout = () => {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('email');
     sessionStorage.removeItem('role');
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    localStorage.removeItem('role');
     router.push('/login');
   };
 
