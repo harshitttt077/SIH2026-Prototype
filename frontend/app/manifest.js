@@ -3,7 +3,7 @@ export default function manifest() {
     name: 'MetroLens Metrology',
     short_name: 'MetroLens',
     description: 'Legal Metrology AI Compliance Engine',
-    start_url: '/dashboard?v=2',
+    start_url: '/',
     display: 'standalone',
     display_override: ['standalone'],
     background_color: '#ffffff',

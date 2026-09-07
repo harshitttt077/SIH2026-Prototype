@@ -20,13 +20,7 @@ export default function UploadPage() {
   const [logs, setLogs] = useState([]);
   const [errorBanner, setErrorBanner] = useState(null);
 
-  useEffect(() => {
-    if (!sessionStorage.getItem('token') && !localStorage.getItem('token')) {
-      sessionStorage.setItem('token', 'demo-officer-token');
-      sessionStorage.setItem('email', 'officer@doca.gov.in');
-      sessionStorage.setItem('role', 'officer');
-    }
-  }, []);
+
 
   const saveToSyncQueue = async (fileBlob, metadata) => {
     try {

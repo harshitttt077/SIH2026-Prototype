@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, ArrowRight, UserCheck, Shield } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1';
 
@@ -16,7 +16,7 @@ export default function Login() {
 
   const doLogin = useCallback(async (loginEmail, loginPassword) => {
     setLoading(true);
-    const toastId = toast.loading('Authenticating...');
+    const toastId = toast.loading('Authenticating Department Credentials...');
     const cleanEmail = (loginEmail || '').trim().toLowerCase();
     const cleanPass = (loginPassword || '').trim();
 
@@ -43,13 +43,13 @@ export default function Login() {
         localStorage.setItem('role', userRole);
         localStorage.setItem('metrolens_token', data.token);
         
-        toast.success(`Logged in as ${userRole === 'admin' ? 'System Admin' : 'Field Officer'}`, { id: toastId });
+        toast.success(`Authenticated as ${userRole === 'admin' ? 'System Administrator' : 'Field Inspection Officer'}`, { id: toastId });
         router.push('/dashboard');
       } else {
         throw new Error('No token in response');
       }
     } catch (err) {
-      // Safety net for Field Officer and System Admin demo accounts if network hiccup
+      // Safety net for Field Officer and System Admin demo accounts if network is offline
       if (cleanEmail === 'officer@gov.in' || cleanEmail === 'admin@gov.in') {
         const fallbackRole = cleanEmail === 'admin@gov.in' ? 'admin' : 'officer';
         const fallbackToken = 'demo-jwt-token-' + fallbackRole;
@@ -61,7 +61,7 @@ export default function Login() {
         localStorage.setItem('role', fallbackRole);
         localStorage.setItem('metrolens_token', fallbackToken);
 
-        toast.success(`Logged in as ${fallbackRole === 'admin' ? 'System Admin' : 'Field Officer'}`, { id: toastId });
+        toast.success(`Authenticated as ${fallbackRole === 'admin' ? 'System Administrator' : 'Field Inspection Officer'}`, { id: toastId });
         router.push('/dashboard');
         return;
       }
@@ -76,14 +76,12 @@ export default function Login() {
     doLogin(email, password);
   };
 
-  // Quick login: fill AND immediately submit
   const handleQuickLogin = (roleEmail, defaultPwd = 'password') => {
     setEmail(roleEmail);
     setPassword(defaultPwd);
     doLogin(roleEmail, defaultPwd);
   };
 
-  // Explicit demo mode — separated clearly from real auth
   const enterDemoMode = () => {
     sessionStorage.setItem('token', 'demo-token');
     sessionStorage.setItem('email', 'demo@metrolens.gov.in');
@@ -92,102 +90,164 @@ export default function Login() {
     localStorage.setItem('email', 'demo@metrolens.gov.in');
     localStorage.setItem('role', 'officer');
     setDemoMode(true);
-    toast.info('Demo mode activated — data is simulated', { duration: 4000 });
-    setTimeout(() => router.push('/dashboard'), 800);
+    toast.info('Demo mode activated — data is simulated', { duration: 3000 });
+    setTimeout(() => router.push('/dashboard'), 600);
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-background flex items-center justify-center p-6 text-text-primary font-sans selection:bg-accent/30">
-      {/* Ambient orbs */}
-      <div className="absolute top-[-15%] left-[-10%] w-[500px] h-[500px] bg-accent/20 rounded-full blur-[100px] mix-blend-screen pointer-events-none animate-pulse" />
-      <div className="absolute bottom-[-15%] right-[-10%] w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-[120px] mix-blend-screen pointer-events-none" style={{ animation: 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite' }} />
+    <div className="min-h-screen relative overflow-hidden bg-[#070D18] flex flex-col justify-center items-center p-4 sm:p-6 text-white font-sans">
+      
+      {/* Official Government Tricolor Ribbon */}
+      <div className="w-full h-1 bg-gradient-to-r from-[#FF9933] via-white to-[#138808] fixed top-0 left-0 right-0 z-50 shrink-0" />
 
-      {/* Glass panel */}
-      <div className="w-full max-w-[440px] glass backdrop-blur-3xl border border-border/50 shadow-2xl rounded-[32px] p-8 sm:p-12 z-10 animate-fade-in relative">
-        {/* Return to National Portal */}
+      {/* Ambient Institutional Navy Glow */}
+      <div className="absolute top-[-20%] left-[20%] w-[600px] h-[600px] bg-blue-900/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-[-15%] right-[10%] w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
+
+      {/* Return to National Portal Bar */}
+      <div className="w-full max-w-[460px] mb-4 flex items-center justify-between z-10">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors mb-6 relative z-10 py-2 px-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-border/40 hover:border-border w-fit -ml-1 group"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 group"
         >
-          <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
-          <span>← Return to National Portal</span>
+          <ArrowLeft size={15} className="transition-transform group-hover:-translate-x-1" />
+          <span>Return to National Portal</span>
         </Link>
+        <span className="text-[11px] font-mono text-amber-300/90 font-medium">SIH26034</span>
+      </div>
 
-        {/* Logo */}
-        <div className="flex items-center gap-4 mb-8 relative z-10">
-          <div className="w-10 h-10 rounded-[12px] bg-gradient-to-br from-accent to-blue-700 flex items-center justify-center shadow-lg shadow-accent/20 border border-white/20">
-            <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
+      {/* Main Government Authentication Container */}
+      <div className="w-full max-w-[460px] bg-[#0B1F3A] border border-blue-900/60 shadow-[0_25px_60px_rgba(11,31,58,0.5)] rounded-2xl p-6 sm:p-8 z-10 relative">
+        
+        {/* State Emblem & Ministry Plinth Header */}
+        <div className="flex items-center gap-3.5 pb-5 mb-6 border-b border-blue-900/60">
+          <div className="flex items-center justify-center shrink-0">
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" 
+              alt="State Emblem of India" 
+              className="h-11 w-auto object-contain brightness-0 invert opacity-95"
+            />
           </div>
-          <span className="font-bold tracking-tight text-[22px]">MetroLens</span>
+          <div className="flex flex-col text-left">
+            <span className="text-[10px] font-sans tracking-[0.06em] text-amber-300 uppercase leading-none font-semibold mb-1">
+              उपभोक्ता मामले विभाग • Dept. of Consumer Affairs
+            </span>
+            <span className="text-base sm:text-lg font-bold text-white tracking-tight leading-none">
+              MetroLens <span className="font-normal text-slate-300 text-sm">Officer Portal</span>
+            </span>
+          </div>
         </div>
 
-        <h1 className="text-[32px] font-semibold tracking-tight leading-[1.1] mb-2 relative z-10">Sign in</h1>
-        <p className="text-[15px] text-text-secondary mb-8 relative z-10">
-          Enter your department credentials to access the compliance platform.
-        </p>
+        {/* Title */}
+        <div className="mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-1.5">
+            Officer Portal Sign In
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Authorized Legal Metrology Officers &amp; Central Operations personnel.
+          </p>
+        </div>
 
-        {/* Login form */}
-        <form onSubmit={handleLogin} className="flex flex-col gap-4 mb-6 relative z-10">
-          <input
-            type="email"
-            placeholder="Email address"
-            className="w-full bg-black/10 dark:bg-white/5 border border-border/50 rounded-[16px] px-5 py-4 text-[15px] focus:outline-none focus:border-accent transition-colors backdrop-blur-sm"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full bg-black/10 dark:bg-white/5 border border-border/50 rounded-[16px] px-5 py-4 text-[15px] focus:outline-none focus:border-accent transition-colors backdrop-blur-sm"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-          />
+        {/* Credentials Form */}
+        <form onSubmit={handleLogin} className="flex flex-col gap-4 mb-6">
+          <div>
+            <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-300 mb-1.5 font-medium">
+              Government Official Email
+            </label>
+            <input
+              type="email"
+              placeholder="officer@doca.gov.in"
+              className="w-full bg-slate-950/60 border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all font-mono"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-300 mb-1.5 font-medium">
+              Portal Password
+            </label>
+            <input
+              type="password"
+              placeholder="••••••••••••"
+              className="w-full bg-slate-950/60 border border-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
           <button
             type="submit"
-            className="w-full bg-text-primary text-background hover:scale-[1.02] active:scale-[0.98] transition-transform rounded-[16px] px-5 py-4 font-semibold text-[15px] mt-4 shadow-xl disabled:opacity-60 disabled:pointer-events-none"
+            className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl px-5 py-3.5 text-sm transition-all shadow-lg hover:shadow-xl mt-2 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
             disabled={loading}
           >
-            {loading ? 'Authenticating...' : 'Continue →'}
+            {loading ? (
+              <span>Verifying Authority Credentials...</span>
+            ) : (
+              <>
+                <span>Sign In to Enforcement System</span>
+                <ArrowRight size={16} />
+              </>
+            )}
           </button>
         </form>
 
-        {/* Quick demo & demo mode */}
-        <div className="border-t border-border/50 pt-6 relative z-10">
-          <p className="text-[12px] font-semibold tracking-widest uppercase text-text-muted mb-3 text-center">Quick Demo Access</p>
-          <div className="grid grid-cols-2 gap-3 mb-3">
+        {/* Quick Demo Access (Hackathon Evaluators) */}
+        <div className="border-t border-blue-900/60 pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-amber-300/90">
+              Evaluator Quick Access:
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">1-Click Fill</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5 mb-3">
             <button
               type="button"
               onClick={() => handleQuickLogin('officer@gov.in', 'password')}
               disabled={loading}
-              className="glass border border-border/50 rounded-[12px] p-3 text-left hover:bg-black/5 dark:hover:bg-white/5 transition-all shadow-sm disabled:opacity-60 group"
+              className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-400/40 rounded-xl p-3 text-left transition-all group disabled:opacity-60"
             >
-              <div className="text-[13px] font-semibold text-text-primary group-hover:text-accent transition-colors">Field Officer</div>
-              <div className="text-[10px] text-text-muted font-mono truncate">officer@gov.in</div>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <UserCheck size={13} className="text-emerald-400" />
+                <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">Field Officer</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono truncate">officer@gov.in</div>
             </button>
+
             <button
               type="button"
               onClick={() => handleQuickLogin('admin@gov.in', 'password')}
               disabled={loading}
-              className="glass border border-border/50 rounded-[12px] p-3 text-left hover:bg-black/5 dark:hover:bg-white/5 transition-all shadow-sm disabled:opacity-60 group"
+              className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-400/40 rounded-xl p-3 text-left transition-all group disabled:opacity-60"
             >
-              <div className="text-[13px] font-semibold text-text-primary group-hover:text-accent transition-colors">System Admin</div>
-              <div className="text-[10px] text-text-muted font-mono truncate">admin@gov.in</div>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Shield size={13} className="text-blue-400" />
+                <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">System Admin</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono truncate">admin@gov.in</div>
             </button>
           </div>
+
           <button
             type="button"
             onClick={enterDemoMode}
             disabled={loading || demoMode}
-            className="w-full text-[12px] text-text-muted hover:text-text-secondary transition-colors py-2 disabled:opacity-40"
+            className="w-full text-center text-[11px] text-slate-400 hover:text-slate-200 transition-colors py-1.5 disabled:opacity-40"
           >
-            Enter Demo Mode (offline preview)
+            Enter Offline Demo Mode (Simulated Sandbox)
           </button>
         </div>
+
       </div>
+
+      {/* Statutory Footer Citation */}
+      <p className="text-[11px] text-slate-500 mt-6 text-center max-w-sm">
+        Authorized use only under Section 18 of the Legal Metrology Act, 2009. Access logs are cryptographically tracked for evidentiary audit.
+      </p>
+
     </div>
   );
 }

@@ -111,7 +111,7 @@ export default function AboutPage() {
 
         </div>
 
-                {/* Crafted By Tanvi Section */}
+                {/* Engineered By Team MetroLens */}
         <div className="mt-16 mb-10 flex flex-col items-center justify-center">
           
           <style>{`
@@ -125,19 +125,19 @@ export default function AboutPage() {
             }
           `}</style>
           
-          <div className="relative w-14 h-14 mb-6 rounded-2xl bg-gradient-to-br from-white to-slate-100 border border-slate-200/60 flex items-center justify-center overflow-hidden animate-[levitatePremium_5s_ease-in-out_infinite]">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/90 to-transparent w-full h-full animate-[sweepPremium_4s_infinite_linear] opacity-70"></div>
-            <span className="font-semibold text-[26px] text-slate-800 relative z-10 tracking-tighter">KT</span>
+          <div className="relative w-14 h-14 mb-5 rounded-2xl bg-gradient-to-br from-[#0B1F3A] to-blue-950 border border-amber-400/40 flex items-center justify-center overflow-hidden animate-[levitatePremium_5s_ease-in-out_infinite] shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full h-full animate-[sweepPremium_4s_infinite_linear]"></div>
+            <span className="font-bold text-[22px] text-amber-300 relative z-10 tracking-tight">TM</span>
           </div>
           
-          <div className="text-[10px] font-bold tracking-[0.3em] text-slate-400 uppercase mb-2">
+          <div className="text-[10px] font-bold tracking-[0.25em] text-slate-400 uppercase mb-1.5">
             Engineered By
           </div>
-          <h3 className="text-[20px] font-medium text-slate-800 tracking-tight">
-            Korada Tanvi
+          <h3 className="text-[20px] font-bold text-slate-900 dark:text-white tracking-tight">
+            Team MetroLens
           </h3>
           <p className="text-[12px] text-slate-500 mt-1 tracking-wider">
-            Lead Developer & Architect
+            Smart India Hackathon 2026 Team (SIH26034)
           </p>
         </div>
 

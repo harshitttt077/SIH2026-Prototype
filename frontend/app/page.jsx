@@ -12,40 +12,28 @@ import {
 
 function HeroSeal() {
   return (
-    <div className="relative w-[260px] sm:w-[300px] md:w-[340px] aspect-square flex items-center justify-center mx-auto perspective-1000">
+    <div className="relative w-[300px] sm:w-[360px] md:w-[420px] lg:w-[450px] aspect-[4/5] flex items-center justify-center mx-auto perspective-1000">
       {/* Background Soft Golden Halo & Ambient Glow */}
-      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#D4AF37]/20 via-[#FF9933]/15 to-transparent blur-3xl -z-10 pointer-events-none" />
+      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#D4AF37]/25 via-[#FF9933]/15 to-transparent blur-3xl -z-10 pointer-events-none" />
       
       {/* Tricolor Subtle Aura Ring */}
       <div 
-        className="absolute w-[92%] h-[92%] rounded-full border border-[#D4AF37]/30 pointer-events-none -z-10 animate-spin-slow opacity-75" 
+        className="absolute w-[88%] h-[88%] rounded-full border border-[#D4AF37]/30 pointer-events-none -z-10 animate-spin-slow opacity-75" 
         style={{ animationDuration: '40s' }} 
       />
 
       {/* 3D Rendered Emblem Container */}
-      <div className="relative z-10 w-full aspect-square flex flex-col items-center justify-center transform-gpu transition-all duration-700 hover:scale-[1.02]">
-        
-        {/* National Emblem Image */}
-        <div className="relative w-full h-[85%] flex items-center justify-center">
-          <Image 
-            unoptimized={true} 
-            src="/emblem-transparent.png" 
-            alt="State Emblem of India - Lion Capital of Ashoka" 
-            width={400} 
-            height={400} 
-            priority 
-            className="object-contain drop-shadow-[0_15px_35px_rgba(11,31,58,0.25)] dark:drop-shadow-[0_20px_45px_rgba(212,175,55,0.25)]" 
-            sizes="(max-width: 768px) 100vw, 400px" 
-          />
-        </div>
-
-        {/* Official Seal Plinth Badge */}
-        <div className="mt-1 px-5 py-1.5 rounded-full bg-[#0B1F3A] text-white border border-[#D4AF37]/50 shadow-xl backdrop-blur-md flex items-center gap-2.5 z-20">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <span className="text-[11px] sm:text-[12px] font-bold tracking-wider uppercase font-sans">
-            सत्यमेव जयते • Official State Emblem
-          </span>
-        </div>
+      <div className="relative z-10 w-full h-full flex items-center justify-center transform-gpu transition-all duration-700 hover:scale-[1.02]">
+        <Image 
+          unoptimized={true} 
+          src="/emblem-transparent.png" 
+          alt="State Emblem of India - Lion Capital of Ashoka" 
+          width={450} 
+          height={540} 
+          priority 
+          className="object-contain w-full h-full drop-shadow-[0_20px_45px_rgba(11,31,58,0.28)] dark:drop-shadow-[0_25px_50px_rgba(212,175,55,0.25)]" 
+          sizes="(max-width: 768px) 100vw, 450px" 
+        />
       </div>
     </div>
   );
@@ -123,8 +111,8 @@ export default function LandingPage() {
       <NavBar />
 
       {/* Hero Section with Official State Emblem */}
-      <section className="relative overflow-hidden pt-8 pb-14 px-4 md:px-8 max-w-7xl mx-auto w-full border-b border-slate-200 dark:border-slate-800">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+      <section className="relative overflow-hidden min-h-[calc(100vh-68px)] flex items-center justify-center py-6 px-4 md:px-8 max-w-7xl mx-auto w-full border-b border-slate-200 dark:border-slate-800">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center w-full">
           
           {/* Left Column: Official Government Pitch */}
           <div className="lg:col-span-7 flex flex-col items-start">
@@ -220,36 +208,9 @@ export default function LandingPage() {
 
           </div>
 
-          {/* Right Column: Lion Capital of Ashoka Emblem & Statutory Verification Pedestal */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center">
+          {/* Right Column: Lion Capital of Ashoka Emblem */}
+          <div className="lg:col-span-5 flex items-center justify-center">
             <HeroSeal />
-
-            {/* Official Statutory Calibration & Authority Pedestal */}
-            <div className="w-full max-w-sm mt-3 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl backdrop-blur-md">
-              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    Statutory Verification Node Active
-                  </span>
-                </div>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
-                  G.S.R. 629(E)
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 pt-3 text-left">
-                <div>
-                  <div className="text-[10px] text-slate-500 uppercase font-mono">Reference Standard</div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono">ML-REF-2026-0842</div>
-                  <div className="text-[10px] text-slate-500">NPLI Traceable Scale</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-500 uppercase font-mono">Statutory Authority</div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100">Legal Metrology Act</div>
-                  <div className="text-[10px] text-slate-500">Sections 18, 36 &amp; 48</div>
-                </div>
-              </div>
-            </div>
           </div>
 
         </div>
