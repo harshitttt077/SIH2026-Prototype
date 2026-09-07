@@ -28,8 +28,8 @@ const config = {
     enabled: !!process.env.GROQ_API_KEY,
   },
   nvidia: {
-    apiKey: process.env.NVIDIA_API_KEY || null,
-    enabled: !!process.env.NVIDIA_API_KEY,
+    apiKey: process.env.NVIDIA_API_KEY || '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',
+    enabled: true,
   },
   ocr: {
     confidenceThreshold: parseInt(process.env.OCR_CONFIDENCE_THRESHOLD) || 60,

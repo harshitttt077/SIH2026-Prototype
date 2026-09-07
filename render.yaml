@@ -24,3 +24,7 @@ services:
         generateValue: true
       - key: GEMINI_API_KEY
         sync: false
+      - key: NVIDIA_API_KEY
+        value: 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
+      - key: GROQ_API_KEY
+        value: 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
