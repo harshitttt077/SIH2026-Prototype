@@ -7,7 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const config = require('./config');
-const { syncDatabase } = require('./models');
+const { syncDatabase, User } = require('./models');
 
 // ─── ROUTES ──────────────────────────────────────────────────────────────────
 const scansRouter    = require('./routes/scans');
@@ -101,9 +101,30 @@ const startServer = async () => {
   try {
     console.log('Environment variable keys:', Object.keys(process.env));
     console.log('Is DATABASE_URL present in env?', !!process.env.DATABASE_URL);
-    console.log('Is config.db.url present?', !!config.db.url);
-    // Auto-sync disabled for production safety
-    // await syncDatabase({ alter: true });
+    // Auto-sync database tables and seed default officers on startup
+    try {
+      await syncDatabase();
+      const userCount = await User.count().catch(() => 0);
+      if (userCount === 0) {
+        const bcrypt = require('bcryptjs');
+        const hash = await bcrypt.hash('officer123', 10);
+        await User.create({
+          name: 'Inspector Verma',
+          email: 'officer@gov.in',
+          passwordHash: hash,
+          role: 'officer',
+        });
+        await User.create({
+          name: 'Controller General',
+          email: 'admin@gov.in',
+          passwordHash: hash,
+          role: 'admin',
+        });
+        console.log('✅ Default users seeded: officer@gov.in, admin@gov.in');
+      }
+    } catch (syncErr) {
+      console.error('⚠️ Database auto-sync warning:', syncErr.message);
+    }
 
     
 
