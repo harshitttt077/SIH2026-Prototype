@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-Local setup script for SIH26034 SatyaLabel (Windows)
+Local setup script for SIH26034 MetroLens (Windows)
 #>
 
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "SatyaLabel (SIH26034) Local Setup" -ForegroundColor Cyan
+Write-Host "MetroLens (SIH26034) Local Setup" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # 1. Check Node.js
@@ -50,7 +50,7 @@ Set-Location -Path ..
 Write-Host "`n============================================================" -ForegroundColor Cyan
 Write-Host "Setup complete (dependencies installed)." -ForegroundColor Cyan
 Write-Host "Next Steps:" -ForegroundColor Yellow
-Write-Host "1. Create database: psql -U postgres -c `"CREATE DATABASE satyalabel_db;`""
+Write-Host "1. Create database: psql -U postgres -c `"CREATE DATABASE metrolens_db;`""
 Write-Host "2. Copy backend/.env.example to backend/.env and update credentials."
 Write-Host "3. Seed database: cd backend ; npm run db:seed"
 Write-Host "4. Start backend: cd backend ; npm run dev"

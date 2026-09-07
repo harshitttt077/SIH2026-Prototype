@@ -1,5 +1,5 @@
 {
-  "name": "satyalabel-backend",
+  "name": "metrolens-backend",
   "version": "1.0.0",
   "description": "SIH26034 - Legal Metrology Compliance Checker Backend",
   "main": "server.js",

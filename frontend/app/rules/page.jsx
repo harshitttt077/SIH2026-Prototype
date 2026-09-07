@@ -56,7 +56,7 @@ export default function RulesPage() {
     if (!sessionStorage.getItem('token') || sessionStorage.getItem('role') !== 'admin') return router.push('/dashboard');
     const fetchRules = async () => {
       try {
-        const API = process.env.NEXT_PUBLIC_API_URL || 'https://satyalabel-backend.onrender.com/api/v1';
+        const API = process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1';
         const res = await fetch(`${API}/rules`, {
           headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
         });

@@ -1,7 +1,7 @@
 // backend/services/rules_engine.js
 // ============================================================
 // LEGAL METROLOGY (PACKAGED COMMODITIES) RULES, 2011
-// Compliance Rule Engine — SIH26034 SatyaLabel
+// Compliance Rule Engine — SIH26034 MetroLens
 // ============================================================
 //
 // Source: Legal Metrology (Packaged Commodities) Rules, 2011
@@ -127,7 +127,7 @@ function parseDate(str) {
   const s = String(str).trim();
   
   // Try DD/MM/YYYY or DD.MM.YYYY
-  const m0 = s.match(/^(?:0?[1-9]|[12]\d|3[01])[\/\-\.](0?[1-9]|1[0-2])[\/\-\.](\d{2}|20\d{2})$/);
+  const m0 = s.match(/^(?:0?[1-9]|[12]\d|3[01])[\/\-\.](0?[1-9]|1[0-2])[\/\-\.](\d{4}|\d{2})$/);
   if (m0) return { month: parseInt(m0[1]), year: m0[2].length === 2 ? 2000 + parseInt(m0[2]) : parseInt(m0[2]) };
 
   const m1 = s.match(/^(0?[1-9]|1[0-2])[\/\-\.](20\d{2})$/);
@@ -136,7 +136,7 @@ function parseDate(str) {
   const m1a = s.match(/^(0?[1-9]|1[0-2])[\/\-\.](\d{2})$/);
   if (m1a) return { month: parseInt(m1a[1]), year: 2000 + parseInt(m1a[2]) };
   
-  const m1b = s.match(/^(0?[1-9]|[12]\d|3[01])[\/\-](0?[1-9]|1[0-2])[\/\-](\d{2}|20\d{2})$/);
+  const m1b = s.match(/^(?:0?[1-9]|[12]\d|3[01])[\/\-](0?[1-9]|1[0-2])[\/\-](\d{4}|\d{2})$/);
   if (m1b) {
      let year = parseInt(m1b[3]);
      if (year < 100) year += 2000;
@@ -144,7 +144,7 @@ function parseDate(str) {
   }
 
   const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-  const m2 = s.match(/([a-zA-Z]+)\.?\s+(\d{2}|20\d{2})/);
+  const m2 = s.match(/([a-zA-Z]+)\.?\s+(\d{4}|\d{2})/);
   if (m2) {
     const idx = months.findIndex(m => m2[1].toLowerCase().startsWith(m));
     if (idx !== -1) {

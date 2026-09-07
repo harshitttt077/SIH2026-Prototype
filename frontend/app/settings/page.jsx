@@ -88,11 +88,11 @@ export default function SettingsPage() {
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-[15px] text-text-primary truncate">{email || 'Not signed in'}</p>
-              <p className="text-[12px] text-text-muted capitalize">{role} · SatyaLabel v{APP_VERSION}</p>
+              <p className="text-[12px] text-text-muted capitalize">{role} · MetroLens v{APP_VERSION}</p>
             </div>
           </div>
 
-          {/* ✨ Admin: Officer Management ✨ */}
+          {/* Admin: Officer Management */}
           {role === 'admin' && (
             <section className="flex flex-col gap-3">
               <h2 className="text-[13px] font-bold tracking-widest uppercase text-text-muted px-2">Officer Management (Admin)</h2>
@@ -125,7 +125,7 @@ export default function SettingsPage() {
                     <Info size={18} />
                   </div>
                   <div className="text-left">
-                    <div className="font-medium text-[15px]">About SatyaLabel</div>
+                    <div className="font-medium text-[15px]">About MetroLens</div>
                     <div className="text-[12px] text-text-muted">Version {APP_VERSION} · SIH26034</div>
                   </div>
                 </div>

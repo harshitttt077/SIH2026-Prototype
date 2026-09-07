@@ -6,8 +6,9 @@ import { triggerHaptic } from '@/utils/haptics';
 import { openDB } from 'idb';
 import NavBar from '@/components/NavBar';
 import DynamicLoader from '@/components/DynamicLoader';
+import { X } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://satyalabel-backend.onrender.com/api/v1';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1';
 
 export default function UploadPage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function UploadPage() {
 
   const saveToSyncQueue = async (fileBlob, metadata) => {
     try {
-      const db = await openDB('SatyaLabelDB', 1, {
+      const db = await openDB('MetroLensDB', 1, {
         upgrade(db) {
           if (!db.objectStoreNames.contains('sync-queue')) {
             db.createObjectStore('sync-queue', { keyPath: 'id', autoIncrement: true });
@@ -100,31 +101,72 @@ export default function UploadPage() {
     });
   };
 
+  const extractErrorMessage = (err) => {
+    if (!err) return 'An unexpected error occurred';
+    if (typeof err === 'string') return err;
+    if (err instanceof Error) {
+      return (typeof err.message === 'string' && err.message !== '[object Object]') ? err.message : 'Upload failed. Please check image format.';
+    }
+    if (typeof err === 'object') {
+      if (typeof err.message === 'string') return err.message;
+      if (typeof err.error === 'string') return err.error;
+      if (typeof err.error === 'object' && err.error !== null) {
+        return err.error.message || err.error.code || 'Encountered upload validation error';
+      }
+      return err.code || 'Upload request failed';
+    }
+    return String(err);
+  };
+
+  const loadSampleLabel = async () => {
+    try {
+      const toastId = toast.loading('Loading verified physical test label...');
+      const res = await fetch('/test-label.jpg');
+      if (!res.ok) throw new Error('Sample image not found on server');
+      const blob = await res.blob();
+      const sampleFile = new File([blob], 'crispy_wave_potato_chips_label.jpg', { type: 'image/jpeg' });
+      setFiles([sampleFile]);
+      setPreviews([URL.createObjectURL(sampleFile)]);
+      setProductName('Crispy Wave Potato Chips');
+      setSourceType('physical_label');
+      toast.success('Sample Regulatory Label loaded. Click "Run Compliance Check".', { id: toastId });
+    } catch (e) {
+      toast.error('Could not load sample label: ' + e.message);
+    }
+  };
+
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (files.length === 0) return toast.error('No image selected');
+    if (files.length === 0) return toast.error('No image selected. Please take a photo or select an image.');
     
     setLoading(true);
     const toastId = toast.loading(files.length > 1 ? 'Processing multi-angle context...' : 'Initializing compliance scan...');
     const metadata = { productName: productName || 'Unknown', sourceType, forceEngine: 'gemini', timestamp: new Date().toISOString() };
     
     try {
+      setLogs([
+        '> Image payload registered in memory buffer',
+        '> Sending to Legal Metrology Ingestion Gateway...'
+      ]);
+
       const formData = new FormData();
       files.forEach(f => formData.append('images', f));
       formData.append('product_name', productName || '');
       formData.append('source_type', sourceType || 'physical_label');
       formData.append('metadata', JSON.stringify(metadata));
 
+      const token = sessionStorage.getItem('token');
       const res = await fetch(`${API}/scans`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` },
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData
       });
       
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
       
       if (!res.ok) {
-        throw new Error(json.error || json.message || "Upload failed");
+        const errorMsg = extractErrorMessage(json.error || json.message || json);
+        throw new Error(errorMsg);
       }
       
       const responseData = json.data || json;
@@ -136,40 +178,116 @@ export default function UploadPage() {
         return;
       }
 
-      // Connect to true SSE stream
-      const sseUrl = `${API}/scans/batch/${batchId}/stream?token=${sessionStorage.getItem('token')}`;
-      const sse = new EventSource(sseUrl);
-      
-      sse.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'progress') {
-            setLogs(prev => [...prev, `> ${data.message}`]);
-          } else if (data.status === 'complete' || data.status === 'completed') {
-            sse.close();
-            toast.success('Scan complete', { id: toastId });
-            router.push(`/results/${data.scanId || batchId}`);
-          } else if (data.status === 'failed') {
-            sse.close();
-            setLogs(prev => [...prev, `> ERROR: ${data.errorMessage || 'Scan failed'}`]);
-            toast.error('Scan failed: ' + (data.errorMessage || 'Unknown error'), { id: toastId });
-            setLoading(false);
+      setLogs(prev => [...prev, `> Batch assigned: ${batchId.slice(0, 8)}...`, '> Executing AI OCR & Legal Metrology extraction pipeline...']);
+
+      let completed = false;
+
+      // 1. Setup real-time SSE stream for high-speed live progress updates
+      let sse = null;
+      try {
+        const sseUrl = `${API}/scans/batch/${batchId}/stream?token=${token || ''}`;
+        sse = new EventSource(sseUrl);
+        
+        sse.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'progress') {
+              setLogs(prev => [...prev, `> ${data.message}`]);
+            } else if (data.status === 'complete' || data.status === 'completed') {
+              if (completed) return;
+              completed = true;
+              sse.close();
+              toast.success('Scan complete', { id: toastId });
+              router.push(`/results/${data.scanId || batchId}`);
+            } else if (data.status === 'failed') {
+              if (completed) return;
+              completed = true;
+              sse.close();
+              const failMsg = extractErrorMessage(data.errorMessage || 'Scan processing failed');
+              setLogs(prev => [...prev, `> ERROR: ${failMsg}`]);
+              toast.error('Scan failed: ' + failMsg, { id: toastId });
+              setLoading(false);
+            }
+          } catch (e) {
+            // ignore JSON parse error in ping
           }
-        } catch (e) {
-          // ignore
+        };
+
+        sse.onerror = () => {
+          if (sse) sse.close();
+          // Fallback seamlessly to polling without throwing or redirecting prematurely
+        };
+      } catch (e) {
+        // SSE unsupported or blocked, fallback to polling
+      }
+
+      // 2. Setup parallel polling interval to guarantee completion detection
+      let attempts = 0;
+      const maxAttempts = 40; // 60 seconds max
+      const pollInterval = setInterval(async () => {
+        if (completed) {
+          clearInterval(pollInterval);
+          return;
         }
-      };
-      
-      sse.onerror = () => {
-        sse.close();
-        setTimeout(() => router.push(`/results/${batchId}`), 2000);
-      };
+
+        attempts++;
+        if (attempts > maxAttempts) {
+          clearInterval(pollInterval);
+          if (sse) sse.close();
+          setLoading(false);
+          toast.error('Scan timed out. Please check your history.', { id: toastId });
+          return;
+        }
+
+        try {
+          const pollRes = await fetch(`${API}/scans/batch/${batchId}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
+
+          if (!pollRes.ok) return;
+          const pollJson = await pollRes.json();
+          const batchData = pollJson.data || pollJson;
+
+          if (batchData.status === 'complete' || batchData.status === 'completed') {
+            if (completed) return;
+            completed = true;
+            clearInterval(pollInterval);
+            if (sse) sse.close();
+            
+            const firstScan = (batchData.scans && batchData.scans.length > 0) ? batchData.scans[0] : null;
+            const targetId = (firstScan && firstScan.id) ? firstScan.id : batchId;
+            
+            setLogs(prev => [...prev, '> Compliance report generated successfully!']);
+            toast.success('Scan complete', { id: toastId });
+            router.push(`/results/${targetId}`);
+          } else if (batchData.status === 'failed') {
+            if (completed) return;
+            completed = true;
+            clearInterval(pollInterval);
+            if (sse) sse.close();
+            setLoading(false);
+            const failMsg = extractErrorMessage(batchData.error_message || batchData.errorMessage || 'Scan processing failed');
+            setLogs(prev => [...prev, `> ERROR: ${failMsg}`]);
+            toast.error('Scan failed: ' + failMsg, { id: toastId });
+          } else {
+            // Still processing: increment subtle progress step
+            if (attempts % 2 === 0 && logs.length < 8) {
+              setLogs(prev => [...prev, '> Analyzing label declarations against Legal Metrology Rules...']);
+            }
+          }
+        } catch (err) {
+          // network glitch, retry next tick
+        }
+      }, 1500);
 
     } catch (err) {
-      toast.error(err.message || 'Upload failed', { id: toastId });
+      const displayMsg = extractErrorMessage(err);
+      toast.error(displayMsg, { id: toastId });
       setLoading(false);
-      // Fire-and-forget sync queue so it doesn't block the UI if IDB hangs
-      saveToSyncQueue(files[0], metadata).catch(console.error);
+      setLogs(prev => [...prev, `> ERROR: ${displayMsg}`]);
+      if (files[0]) {
+        saveToSyncQueue(files[0], metadata).catch(console.error);
+      }
     }
   };
 
@@ -200,7 +318,7 @@ export default function UploadPage() {
                         <div key={i} className="relative w-[100px] h-[140px] border border-border rounded-lg overflow-hidden group/img shadow-sm">
                           <img src={src} className="w-full h-full object-cover" />
                           <button type="button" onClick={() => removeFile(i)} className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity z-20 hover:scale-110">
-                            ✕
+                            <X size={14} />
                           </button>
                         </div>
                       ))}
@@ -239,6 +357,17 @@ export default function UploadPage() {
                        </div>
 
                      </div>
+                      
+                      <div className="mt-2 pt-2 border-t border-dashed border-slate-200 w-full flex justify-center">
+                        <button
+                          type="button"
+                          onClick={loadSampleLabel}
+                          className="text-[11px] font-mono tracking-wider uppercase text-primary/80 hover:text-primary hover:underline flex items-center gap-1.5 py-1 px-3 rounded-full bg-primary/5 border border-primary/20 transition-all hover:bg-primary/10"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                          Load Sample Test Label (Crispy Wave Chips)
+                        </button>
+                      </div>
                   </div>
                 )}
               </div>

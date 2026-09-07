@@ -17,7 +17,7 @@ async function createIcon() {
 
   const svgText = `
     <svg width="1024" height="1024">
-      <text x="512" y="850" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="90" fill="white">SatyaLabel</text>
+      <text x="512" y="850" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="90" fill="white">MetroLens</text>
       <text x="512" y="930" text-anchor="middle" font-family="sans-serif" font-weight="500" font-size="40" fill="rgba(255, 255, 255, 0.7)" letter-spacing="0.1em">LEGAL METROLOGY</text>
     </svg>
   `;

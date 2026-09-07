@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import NavBar from '@/components/NavBar';
 import { useRouter } from 'next/navigation';
 
-import { Activity, CheckCircle, AlertTriangle, Clock, FileText, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { Activity, CheckCircle, AlertTriangle, Clock, FileText, ArrowUpRight, TrendingUp, AlertOctagon } from 'lucide-react';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -13,7 +13,7 @@ export default function Dashboard() {
     if (!sessionStorage.getItem('token')) return router.push('/login');
     const fetchStats = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://satyalabel-backend.onrender.com/api/v1'}/dashboard/stats`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1'}/dashboard/stats`, {
           headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
         });
         if (!res.ok) throw new Error('API Error');
@@ -231,7 +231,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="text-red-500">🏴</span> Repeat Non-Compliance Offenders
+                  <AlertOctagon className="w-5 h-5 text-red-500" /> Repeat Non-Compliance Offenders
                 </h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Brands with the most failed scans across all inspections</p>
               </div>

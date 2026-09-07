@@ -1,4 +1,4 @@
-# SatyaLabel — Legal Metrology Compliance Checker
+# MetroLens — Legal Metrology Compliance Checker
 ## Smart India Hackathon — Problem Statement SIH26034
 ### Ministry of Consumer Affairs, Food & Public Distribution
 
@@ -45,7 +45,7 @@ For Hindi OCR support, download the `hin.traineddata` file:
 
 ```bash
 git clone <your-repo-url>
-cd satyalabel
+cd metrolens
 
 # Backend
 cd backend
@@ -64,7 +64,7 @@ Edit `backend/.env`:
 ```env
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=satyalabel
+DB_NAME=metrolens
 DB_USER=postgres
 DB_PASSWORD=your_pg_password
 
@@ -78,9 +78,9 @@ GEMINI_API_KEY=your_key_here
 
 ```bash
 # In PostgreSQL:
-createdb satyalabel
+createdb metrolens
 # Or in psql:
-# CREATE DATABASE satyalabel;
+# CREATE DATABASE metrolens;
 ```
 
 ### 4. Start Backend
@@ -175,7 +175,7 @@ This is honest — judges respect this more than false confidence.
 ## Project Structure
 
 ```
-satyalabel/
+metrolens/
 ├── backend/
 │   ├── routes/          API route handlers
 │   ├── services/
@@ -239,5 +239,5 @@ npm test
 
 ---
 
-*SatyaLabel — Built for Smart India Hackathon 2026, Problem Statement SIH26034*
+*MetroLens — Built for Smart India Hackathon 2026, Problem Statement SIH26034*
 *Ministry of Consumer Affairs, Food & Public Distribution — Department of Consumer Affairs*

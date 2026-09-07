@@ -23,7 +23,7 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: 'SatyaLabel',
+  title: 'MetroLens',
   description: 'Legal Metrology Compliance Checker',
   icons: {
     icon: '/icon.png',
@@ -33,7 +33,7 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'SatyaLabel',
+    title: 'MetroLens',
   },
 }
 
@@ -42,7 +42,6 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <head></head>
       <body className={`${inter.variable} ${sourceSerif.variable} font-sans pb-24 md:pb-0 overflow-x-hidden w-full`}>
-        <SplashScreen />
         <ThemeProvider
           attribute="class"
           defaultTheme="light" forcedTheme="light"

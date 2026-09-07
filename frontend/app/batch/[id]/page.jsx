@@ -4,6 +4,7 @@ import NavBar from '@/components/NavBar';
 import DynamicLoader from '@/components/DynamicLoader';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Package, AlertTriangle } from 'lucide-react';
 
 export default function BatchPage({ params }) {
   const [batch, setBatch] = useState(null);
@@ -11,7 +12,7 @@ export default function BatchPage({ params }) {
   const [resolvedParams, setResolvedParams] = useState(null);
   const router = useRouter();
   
-  const API = process.env.NEXT_PUBLIC_API_URL || 'https://satyalabel-backend.onrender.com/api/v1';
+  const API = process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1';
 
   useEffect(() => {
     params.then(p => setResolvedParams(p));
@@ -85,18 +86,22 @@ export default function BatchPage({ params }) {
           </div>
           ) : batch?.status === 'failed' ? (
            <div className="flex flex-col items-center justify-center py-32 text-center">
-             {batch?.error_message === 'SINGLE_IMAGE_MULTIPLE_PRODUCTS' ? (
-                 <>
-                   <div className="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mb-6 text-3xl mx-auto">&#128161;</div>
-                   <h2 className="text-[22px] font-medium text-text-primary mb-2">Multiple Products Detected</h2>
-                   <p className="text-text-secondary mb-6 max-w-md mx-auto">More than one product was detected in this photo. To maintain an accurate legal chain of evidence, please scan only one product at a time.</p>
-                 </>
-               ) : batch?.error_message === 'MULTIPLE_IMAGES_MULTIPLE_PRODUCTS' ? (
-                 <>
-                   <div className="w-16 h-16 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center mb-6 text-3xl mx-auto">&#128230;</div>
-                   <h2 className="text-[22px] font-medium text-text-primary mb-2">Please Scan One Item At A Time</h2>
-                   <p className="text-text-secondary mb-6 max-w-md mx-auto">You uploaded photos of different products. The AI requires all photos in a single batch to be of the same item (e.g., front and back of the same bottle).</p>
-                 </>
+              {batch?.error_message === 'SINGLE_IMAGE_MULTIPLE_PRODUCTS' ? (
+                  <>
+                    <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-6 mx-auto border border-blue-500/20">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    </div>
+                    <h2 className="text-[22px] font-medium text-text-primary mb-2">Multiple Products Detected</h2>
+                    <p className="text-text-secondary mb-6 max-w-md mx-auto">More than one product was detected in this photo. To maintain an accurate legal chain of evidence, please scan only one product at a time.</p>
+                  </>
+                ) : batch?.error_message === 'MULTIPLE_IMAGES_MULTIPLE_PRODUCTS' ? (
+                  <>
+                    <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-6 mx-auto border border-amber-500/20">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                    </div>
+                    <h2 className="text-[22px] font-medium text-text-primary mb-2">Please Scan One Item At A Time</h2>
+                    <p className="text-text-secondary mb-6 max-w-md mx-auto">You uploaded photos of different products. The AI requires all photos in a single batch to be of the same item (e.g., front and back of the same bottle).</p>
+                  </>
                ) : (
                  <>
                    <h2 className="text-[22px] font-medium text-red-500 mb-2">Scan Failed</h2>
@@ -120,7 +125,7 @@ export default function BatchPage({ params }) {
               
               {batch?.scans?.length === 0 && batch?.status === 'completed' && (
                 <div className="flex flex-col items-center justify-center py-16 bg-surface/30 rounded-2xl border border-border mt-8">
-                  <div className="text-6xl mb-4 opacity-50">📦</div>
+                  <Package className="w-14 h-14 text-text-muted/40 mb-4" />
                   <h3 className="text-xl font-medium text-text-primary mb-2">No FMCG Products Detected</h3>
                   <p className="text-text-secondary text-center max-w-sm">
                     The AI could not identify any valid consumer packaging in this image. Please ensure the label is clearly visible and try again.
@@ -145,7 +150,7 @@ export default function BatchPage({ params }) {
                         )}
                         {scan.extracted_fields?._quality_warning && (
                           <span className="ml-3 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 align-middle uppercase tracking-wider">
-                            ⚠️ Poor Quality
+                            <AlertTriangle className="w-3 h-3 mr-1 inline" /> Poor Quality
                           </span>
                         )}
                       </h3>

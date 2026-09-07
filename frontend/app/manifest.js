@@ -1,7 +1,7 @@
 export default function manifest() {
   return {
-    name: 'SatyaLabel Metrology',
-    short_name: 'SatyaLabel',
+    name: 'MetroLens Metrology',
+    short_name: 'MetroLens',
     description: 'Legal Metrology AI Compliance Engine',
     start_url: '/dashboard?v=2',
     display: 'standalone',

@@ -1,5 +1,5 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = new Sequelize('postgresql://satyalabel:O8P80j7E9XqE5O8wL61N0oFzR0fS9d8v@dpg-cv62u1tds78s73dmv9fg-a.oregon-postgres.render.com/satyalabel_dev_db', {
+const sequelize = new Sequelize('postgresql://metrolens:O8P80j7E9XqE5O8wL61N0oFzR0fS9d8v@dpg-cv62u1tds78s73dmv9fg-a.oregon-postgres.render.com/metrolens_dev_db', {
   dialect: 'postgres',
   dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },
   logging: false

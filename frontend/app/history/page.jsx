@@ -4,7 +4,7 @@ import NavBar from '@/components/NavBar';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://satyalabel-backend.onrender.com/api/v1';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1';
 
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
 function DeleteModal({ onConfirm, onCancel }) {
@@ -90,7 +90,7 @@ export default function HistoryPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `SatyaLabel_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `MetroLens_Export_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

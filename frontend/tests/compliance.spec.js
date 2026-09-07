@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('SatyaLabel E2E Verification Flow', () => {
+test.describe('MetroLens E2E Verification Flow', () => {
   test('Officer Login and Dashboard Navigation', async ({ page }) => {
     await page.goto('http://localhost:3000');
     

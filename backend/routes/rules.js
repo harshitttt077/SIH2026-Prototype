@@ -12,8 +12,14 @@
 
 const express = require('express');
 const router = express.Router();
+const { VERSIONED_RULES_REGISTRY } = require('../services/metrology_engine');
 
 const ok = (res, data) => res.json({ data });
+
+// ─── GET /api/v1/rules/versioned-registry ─────────────────────────────────────
+router.get('/versioned-registry', (req, res) => {
+  ok(res, VERSIONED_RULES_REGISTRY);
+});
 
 // ─── RULE CATALOGUE ───────────────────────────────────────────────────────────
 // Source of truth for all rules implemented in rules_engine.js.
@@ -213,7 +219,7 @@ router.get('/', (req, res) => {
   ok(res, {
     total: rules.length,
     description:
-      'Rules as implemented in the SatyaLabel compliance engine. ' +
+      'Rules as implemented in the MetroLens compliance engine. ' +
       'Source: Legal Metrology (Packaged Commodities) Rules, 2011 (as amended). ' +
       'Cross-check against: consumeraffairs.gov.in/pages/legal-metrology-act',
     filters_applied: { set: set || null, severity: severity || null },

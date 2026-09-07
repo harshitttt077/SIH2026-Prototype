@@ -1,5 +1,5 @@
 // backend/server.js
-// Express application entry point — SIH26034 SatyaLabel Backend
+// Express application entry point — SIH26034 MetroLens Backend
 // Updated for Spec 05: base path /api/v1, standardized error envelope
 require('dotenv').config();
 
@@ -17,6 +17,7 @@ const authRouter     = require('./routes/auth');
 const rulesRouter    = require('./routes/rules');
 const modelsRouter   = require('./routes/models');
 const debugRouter    = require('./routes/debug');
+const metrologyRouter = require('./routes/metrology');
 
 const app = express();
 
@@ -36,6 +37,7 @@ const API = '/api/v1';
 
 app.use(`${API}/auth`,      authRouter);
 app.use(`${API}/scans`,     scansRouter);
+app.use(`${API}/metrology`, metrologyRouter);
 app.use(`${API}/models`,    modelsRouter);
 app.use(`${API}/debug`,     debugRouter);
 app.use(`${API}/reports`,   reportsRouter);
@@ -49,7 +51,7 @@ app.get(`${API}/health`, (req, res) => {
       status: 'ok',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
-      service: 'SatyaLabel — SIH26034 Legal Metrology Compliance Checker',
+      service: 'MetroLens — SIH26034 Legal Metrology Compliance Checker',
       geminiEnabled: config.gemini?.enabled ?? false,
     },
   });
@@ -108,7 +110,7 @@ const startServer = async () => {
 app.listen(config.server.port, () => {
       console.log('');
       console.log('┌────────────────────────────────────────────────┐');
-      console.log('│  SatyaLabel Backend — SIH26034                 │');
+      console.log('│  MetroLens Backend — SIH26034                 │');
       console.log('│  Legal Metrology Compliance Checker             │');
       console.log('├────────────────────────────────────────────────┤');
       console.log(`│  API     : http://localhost:${config.server.port}/api/v1        │`);
