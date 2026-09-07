@@ -123,7 +123,15 @@ async function runBatchPipeline(batch, imagePath, metadata = {}) {
     emitProgress(batch.id, 2, 'Extracting textual tokens from image...');
     const ocrResult = await runOcrPipeline(filePathsArray, metadata.forceEngine);
     if (!ocrResult) {
-      await batch.update({ status: 'failed', errorMessage: 'Could not extract text.' });
+      await batch.update({ status: 'failed', errorMessage: 'Could not extract text from image.' });
+      return;
+    }
+
+    // Quality gate: check if AI identified this as non-packaging (e.g. human, face, selfie, animal, random photo)
+    if (ocrResult.geminiStructuredData?.is_valid_packaging === false) {
+      const rejectMsg = ocrResult.geminiStructuredData.rejection_reason || 'Image is not a packaged commodity or product label.';
+      await batch.update({ status: 'failed', errorMessage: rejectMsg });
+      emitProgress(batch.id, 5, `Inspection Rejected: ${rejectMsg}`);
       return;
     }
     
@@ -131,8 +139,13 @@ async function runBatchPipeline(batch, imagePath, metadata = {}) {
     if (!Array.isArray(productsArray)) productsArray = [productsArray];
     
     const rawProductData = productsArray[0];
-    if (!rawProductData || Object.keys(rawProductData).length === 0) {
-      await batch.update({ status: 'failed', errorMessage: 'No consumer packaging found.' });
+    if (!rawProductData || Object.keys(rawProductData).length === 0 ||
+        ((!rawProductData.product_name || rawProductData.product_name === 'Packaged Commodity (Offline Inspection)') &&
+         !rawProductData.mrp && !rawProductData.net_quantity &&
+         (!ocrResult.text || ocrResult.text.trim().length < 15))) {
+      const emptyMsg = 'No consumer packaging or readable declarations detected in the image. Please upload a clear photo of a packaged product or compliance label.';
+      await batch.update({ status: 'failed', errorMessage: emptyMsg });
+      emitProgress(batch.id, 5, `Inspection Rejected: ${emptyMsg}`);
       return;
     }
     
@@ -142,55 +155,61 @@ async function runBatchPipeline(batch, imagePath, metadata = {}) {
     emitProgress(batch.id, 4, 'Applying ISO/IEC 17025 Metrology & ILAC G8 Guard-Banding...');
     const { results, violations, stats } = await validateCompliance(fieldsMap, ocrResult.text, metadata);
 
-    // ─── CORE SIH26034 METROLOGY PIPELINE (PDF Specification) ───
-    const rawMrpNumeric = parseFloat(String(fieldsMap.mrp || '').replace(/[^0-9.]/g, '')) || 85.00;
-    const netQtyStr = fieldsMap.net_quantity ? `${fieldsMap.net_quantity} ${fieldsMap.net_quantity_unit || ''}`.trim() : '85 g';
-    const pixelsPerMm = metadata.pixels_per_mm || 8.42;
-    const packDims = metadata.pack_dimensions || { width_cm: 14.5, height_cm: 20.0, depth_cm: 4.0, shape: 'rectangular' };
+    // ─── CORE SIH26034 METROLOGY PIPELINE ───
+    const rawMrpNumeric = fieldsMap.mrp ? parseFloat(String(fieldsMap.mrp).replace(/[^0-9.]/g, '')) : null;
+    const netQtyStr = fieldsMap.net_quantity ? `${fieldsMap.net_quantity} ${fieldsMap.net_quantity_unit || ''}`.trim() : null;
+    const pixelsPerMm = metadata.pixels_per_mm || null;
+    const packDims = metadata.pack_dimensions || null;
 
-    const metrologyAnalysis = runFullMetrologyAnalysis({
-      imageHash: require('crypto').createHash('sha256').update(String(batch.id)).digest('hex'),
-      pixelsPerMm,
-      netQuantity: netQtyStr,
-      mrp: rawMrpNumeric,
-      category: fieldsMap.category || 'general',
-      packDimensions: packDims,
-      isEmbossed: fieldsMap.is_embossed === true || fieldsMap.is_embossed === 'true',
-      mrpNumeralBox: ocrResult._mrpBox || {
-        text: String(rawMrpNumeric.toFixed(2)),
-        cap_height_pixels: 15.3,
-        width_pixels: 7.2,
-        height_mm: 1.82,
-        width_mm: 0.86,
-        clearance_mm: { top: 2.8, bottom: 2.4, left: 1.2, right: 4.1 }
-      }
-    });
+    let metrologyAnalysis = null;
+    if (rawMrpNumeric && netQtyStr) {
+      metrologyAnalysis = runFullMetrologyAnalysis({
+        imageHash: require('crypto').createHash('sha256').update(String(batch.id)).digest('hex'),
+        pixelsPerMm: pixelsPerMm || 8.42,
+        netQuantity: netQtyStr,
+        mrp: rawMrpNumeric,
+        category: fieldsMap.category || 'general',
+        packDimensions: packDims || { width_cm: 14.5, height_cm: 20.0, depth_cm: 4.0, shape: 'rectangular' },
+        isEmbossed: fieldsMap.is_embossed === true || fieldsMap.is_embossed === 'true',
+        mrpNumeralBox: ocrResult._mrpBox || (metadata.known_mrp_box ? {
+          text: String(rawMrpNumeric.toFixed(2)),
+          cap_height_pixels: 15.3,
+          width_pixels: 7.2,
+          height_mm: 1.82,
+          width_mm: 0.86,
+          clearance_mm: { top: 2.8, bottom: 2.4, left: 1.2, right: 4.1 }
+        } : null)
+      });
+    }
 
-    const productName = fieldsMap.product_name || batch.productNameHint || 'Unknown Product';
+    const productName = fieldsMap.product_name || batch.productNameHint || 'Packaged Commodity';
     const brandName   = fieldsMap.brand_name   || batch.brandNameHint   || null;
 
-    const section48Notice = generateSection48Notice({
-      inspectionData: metrologyAnalysis,
-      offenderDetails: {
-        firm_name: fieldsMap.manufacturer_name || brandName || 'Apex Confectioneries & Foods Ltd.',
-        gstin: fieldsMap.gstin || '07AABCA9921F1Z8',
-        address: fieldsMap.manufacturer_address || 'Industrial Area Phase-III, New Delhi',
-        commodity: productName
-      },
-      officerDetails: {
-        name: batch.uploadedBy || 'Authorized Legal Metrology Officer',
-        badge: 'LMO-DL-4819',
-        circle: 'District Central Directorate',
-        rank: 'Controller'
-      }
-    });
+    let section48Notice = null;
+    if (metrologyAnalysis) {
+      section48Notice = generateSection48Notice({
+        inspectionData: metrologyAnalysis,
+        offenderDetails: {
+          firm_name: fieldsMap.manufacturer_name || brandName || 'Unspecified Manufacturer / Packer',
+          gstin: fieldsMap.gstin || null,
+          address: fieldsMap.manufacturer_address || 'Address not declared on packaging',
+          commodity: productName
+        },
+        officerDetails: {
+          name: batch.uploadedBy || 'Authorized Legal Metrology Officer',
+          badge: 'LMO-DL-4819',
+          circle: 'District Central Directorate',
+          rank: 'Controller'
+        }
+      });
+    }
 
     fieldsMap._metrology = metrologyAnalysis;
     fieldsMap._section48_notice = section48Notice;
 
-    // Synthesize physical metrology violations into results
+    // Synthesize physical metrology violations into results only if analysis ran
     const metrologyViolations = [];
-    if (metrologyAnalysis.ilac_decision_rule && metrologyAnalysis.ilac_decision_rule.verdict !== 'COMPLIANT') {
+    if (metrologyAnalysis?.ilac_decision_rule && metrologyAnalysis.ilac_decision_rule.verdict !== 'COMPLIANT') {
       metrologyViolations.push({
         rule_id: 'Rule 7(2) Table I',
         ruleId: 'Rule 7(2) Table I',
@@ -203,7 +222,7 @@ async function runBatchPipeline(batch, imagePath, metadata = {}) {
         confidence: 'high'
       });
     }
-    if (metrologyAnalysis.rule_8_free_space && metrologyAnalysis.rule_8_free_space.status !== 'PASS') {
+    if (metrologyAnalysis?.rule_8_free_space && metrologyAnalysis.rule_8_free_space.status !== 'PASS') {
       metrologyViolations.push({
         rule_id: 'Rule 8 Clearance',
         ruleId: 'Rule 8 Clearance',
@@ -216,7 +235,7 @@ async function runBatchPipeline(batch, imagePath, metadata = {}) {
         confidence: 'high'
       });
     }
-    if (metrologyAnalysis.rule_9_contrast && metrologyAnalysis.rule_9_contrast.status !== 'PASS') {
+    if (metrologyAnalysis?.rule_9_contrast && metrologyAnalysis.rule_9_contrast.status !== 'PASS') {
       metrologyViolations.push({
         rule_id: 'Rule 9(1)(b) Contrast',
         ruleId: 'Rule 9(1)(b) Contrast',

@@ -56,6 +56,8 @@ async function preprocessImage(imagePath) {
 
 // ─── JSON SCHEMA PROMPT ───────────────────────────────────────────────────────
 const SCHEMA_HINT = JSON.stringify({
+  is_valid_packaging: true,
+  rejection_reason: null,
   products: [{
     raw_text_transcript: "Literal transcription of all readable text on the package",
     product_name: "string",
@@ -78,15 +80,25 @@ const SCHEMA_HINT = JSON.stringify({
   }]
 }, null, 2);
 
-const STRUCTURED_PROMPT = `You are the core "AI Brain" of a Legal Metrology enforcement system.
-You are analyzing one or more images that represent different angles (front, back, sides) of a SINGLE consumer packaged good. Synthesize the text across all angles into ONE single product JSON output.
+const STRUCTURED_PROMPT = `You are the core "AI Brain" of a Legal Metrology enforcement system (Department of Consumer Affairs, Government of India).
+Your job is to inspect retail packaged goods under the Legal Metrology (Packaged Commodities) Rules, 2011.
 
-CRITICAL INSTRUCTIONS:
-- You must extract the exact data from the packaging.
-- Read carefully and accurately. If a value is missing, use null.
-- Provide a literal transcription of all readable text on the package in the 'raw_text_transcript' field.
-- Your output MUST strictly be a valid JSON object adhering to this schema:
-${SCHEMA_HINT}`;
+STEP 1: IMAGE VALIDATION (CRITICAL QUALITY GATE)
+First, verify whether the image actually depicts a consumer packaged commodity (box, bottle, pouch, jar, can, packet, retail carton, or physical product label).
+- IF the image contains a human, person, face, selfie, animal, natural landscape, room, furniture, vehicle, computer screenshot of unrelated apps/text, or any non-packaging subject:
+  You MUST return:
+  "is_valid_packaging": false,
+  "rejection_reason": "Image contains a person or non-packaging subject. Legal Metrology inspection requires a clear photo of a packaged commodity or compliance label.",
+  "products": []
+  Do NOT invent or hallucinate product details on non-packaging images!
+
+STEP 2: DECLARATION EXTRACTION (ONLY IF VALID PACKAGING)
+If the image is a valid packaged commodity or retail label:
+- Set "is_valid_packaging": true
+- Set "rejection_reason": null
+- Extract literal text accurately into the products array. If a declaration is missing from the label, use null.
+- In 'raw_text_transcript', provide the exact text visible on the package.
+- Output MUST strictly be valid JSON conforming to the schema.`;
 
 // ─── TIER 1: GOOGLE GEMINI VISION ─────────────────────────────────────────────
 async function runGeminiVision(imagePaths, modelIndex = 0) {
@@ -137,11 +149,26 @@ async function runGeminiVision(imagePaths, modelIndex = 0) {
     try {
       const jsonMatch = cleaned.match(/[\[\{][\s\S]*[\]\}]/);
       const rawParsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(cleaned);
+
+      if (rawParsed.is_valid_packaging === false) {
+        console.log('[OCR] Gemini detected non-packaging image:', rawParsed.rejection_reason);
+        return {
+          text: '',
+          confidence: 99,
+          engine: 'gemini',
+          structuredData: {
+            is_valid_packaging: false,
+            rejection_reason: rawParsed.rejection_reason || 'Image contains a person or non-packaging subject. Not a packaged commodity.',
+            products: []
+          }
+        };
+      }
+
       let products = Array.isArray(rawParsed.products) ? rawParsed.products : (Array.isArray(rawParsed) ? rawParsed : [rawParsed]);
       if (!products || products.length === 0) {
         products = [{ product_name: rawParsed.product_name || 'Packaged Commodity', raw_text_transcript: cleaned }];
       }
-      structuredData = { products };
+      structuredData = { is_valid_packaging: true, products };
     } catch (parseErr) {
       console.warn('[OCR] Gemini JSON parse warning:', parseErr.message);
       // Robust regex salvage if JSON is slightly truncated
@@ -251,14 +278,29 @@ async function runNvidiaVision(imagePaths) {
     try {
       const jsonMatch = cleaned.match(/[\[\{][\s\S]*[\]\}]/);
       const rawParsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(cleaned);
+
+      if (rawParsed.is_valid_packaging === false) {
+        console.log('[OCR] NVIDIA detected non-packaging image:', rawParsed.rejection_reason);
+        return {
+          text: '',
+          confidence: 99,
+          engine: 'nvidia',
+          structuredData: {
+            is_valid_packaging: false,
+            rejection_reason: rawParsed.rejection_reason || 'Image contains a person or non-packaging subject. Not a packaged commodity.',
+            products: []
+          }
+        };
+      }
+
       let products = Array.isArray(rawParsed.products) ? rawParsed.products : (Array.isArray(rawParsed) ? rawParsed : [rawParsed]);
       if (!products || products.length === 0) {
         products = [{ product_name: rawParsed.product_name || 'Packaged Commodity', raw_text_transcript: cleaned }];
       }
-      structuredData = { products };
+      structuredData = { is_valid_packaging: true, products };
     } catch (parseErr) {
       console.warn('[OCR] NVIDIA JSON parse warning:', parseErr.message);
-      structuredData = { products: [{ product_name: 'Packaged Commodity', raw_text_transcript: cleaned }] };
+      structuredData = { is_valid_packaging: true, products: [{ product_name: 'Packaged Commodity', raw_text_transcript: cleaned }] };
     }
 
     const rawText = structuredData.products[0]?.raw_text_transcript || responseText;
@@ -278,23 +320,27 @@ async function runNvidiaVision(imagePaths) {
 
 // ─── TIER 3: LOCAL OFFLINE TESSERACT OCR ──────────────────────────────────────
 async function runTesseractOffline(imagePaths) {
-  console.log('[OCR] Engaging Offline Tesseract OCR Safety Net...');
-  const paths = Array.isArray(imagePaths) ? imagePaths : [imagePaths];
-  let combinedText = '';
-  let avgConfidence = 70;
+  console.log('[OCR] Processing with offline Tesseract engine...');
+  let fullText = '';
+  let totalConfidence = 0;
+  let count = 0;
 
-  for (const p of paths) {
+  for (const p of imagePaths) {
     try {
-      const { data: { text, confidence } } = await Tesseract.recognize(p, 'eng');
-      combinedText += (text || '') + '\n';
-      avgConfidence = confidence || 70;
-    } catch (e) {
-      console.warn('[OCR] Tesseract single image error:', e.message);
+      const { data } = await Tesseract.recognize(p, 'eng', {
+        logger: () => {}
+      });
+      fullText += ' ' + data.text;
+      totalConfidence += data.confidence || 75;
+      count++;
+    } catch (tessErr) {
+      console.error('[OCR] Local Tesseract error on file:', p, tessErr.message);
     }
   }
 
-  const cleanText = combinedText.trim();
-  const regexExtracted = extractFields(cleanText, null, null);
+  const cleanText = fullText.trim();
+  const avgConfidence = count > 0 ? totalConfidence / count : 0;
+  const regexExtracted = extractFields(cleanText, null);
 
   const fallbackProduct = {
     ai_summary: `Processed via offline local OCR engine with ${Math.round(avgConfidence)}% optical recognition confidence. Mandatory declarations parsed using statutory regex patterns.`,
@@ -321,8 +367,8 @@ async function runTesseractOffline(imagePaths) {
     text: cleanText,
     engine: 'tesseract',
     confidenceAvg: Math.round(avgConfidence),
-    geminiStructuredData: { products: [fallbackProduct] },
-    structuredData: { products: [fallbackProduct] },
+    geminiStructuredData: { is_valid_packaging: true, products: [fallbackProduct] },
+    structuredData: { is_valid_packaging: true, products: [fallbackProduct] },
     _fontMetrics: [],
     _jsonText: JSON.stringify(fallbackProduct)
   };
@@ -330,8 +376,9 @@ async function runTesseractOffline(imagePaths) {
 
 // ─── RESULT FORMATTER ─────────────────────────────────────────────────────────
 function formatResult(res) {
+  const firstProduct = res.structuredData?.products?.[0];
   return {
-    text: res.structuredData?.products?.[0]?.raw_text_transcript || res.text,
+    text: firstProduct?.raw_text_transcript || res.text || '',
     engine: res.engine,
     confidenceAvg: res.confidence || 85,
     geminiStructuredData: res.structuredData,
@@ -369,6 +416,13 @@ async function runOcrPipeline(imagePaths, metadata = {}) {
       try {
         console.log('[OCR] Tier 1: Querying Google Gemini Vision...');
         const res = await runGeminiVision(processedPaths);
+
+        // If explicitly rejected at the packaging quality gate, RETURN IMMEDIATELY! Do NOT cascade to other OCR engines!
+        if (res && res.structuredData?.is_valid_packaging === false) {
+          console.log('[OCR] Image rejected as non-packaging at Quality Gate.');
+          return formatResult(res);
+        }
+
         const hasValidText = res && (
           (res.text && res.text.trim().length > 25) ||
           (res.structuredData?.products?.[0]?.raw_text_transcript?.trim().length > 25) ||
@@ -389,6 +443,10 @@ async function runOcrPipeline(imagePaths, metadata = {}) {
     try {
       console.log('[OCR] Tier 2: Querying NVIDIA NIM Vision Fallback...');
       const res = await runNvidiaVision(processedPaths);
+      if (res && res.structuredData?.is_valid_packaging === false) {
+        console.log('[OCR] Image rejected as non-packaging by NVIDIA NIM.');
+        return formatResult(res);
+      }
       return formatResult(res);
     } catch (nvidiaErr) {
       console.warn('[OCR] Tier 2 (NVIDIA NIM) failed:', nvidiaErr.message);

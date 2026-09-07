@@ -6,7 +6,7 @@ import { triggerHaptic } from '@/utils/haptics';
 import { openDB } from 'idb';
 import NavBar from '@/components/NavBar';
 import DynamicLoader from '@/components/DynamicLoader';
-import { X } from 'lucide-react';
+import { X, AlertTriangle } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1';
 
@@ -18,6 +18,7 @@ export default function UploadPage() {
   const [productName, setProductName] = useState('');
   const [sourceType, setSourceType] = useState('physical_label');
   const [logs, setLogs] = useState([]);
+  const [errorBanner, setErrorBanner] = useState(null);
 
   useEffect(() => {
     if (!sessionStorage.getItem('token')) router.push('/login');
@@ -206,8 +207,9 @@ export default function UploadPage() {
               completed = true;
               sse.close();
               const failMsg = extractErrorMessage(data.errorMessage || 'Scan processing failed');
-              setLogs(prev => [...prev, `> ERROR: ${failMsg}`]);
-              toast.error('Scan failed: ' + failMsg, { id: toastId });
+              setLogs(prev => [...prev, `> REJECTED: ${failMsg}`]);
+              setErrorBanner(failMsg);
+              toast.error('Scan rejected: ' + failMsg, { id: toastId });
               setLoading(false);
             }
           } catch (e) {
@@ -277,8 +279,9 @@ export default function UploadPage() {
             if (sse) sse.close();
             setLoading(false);
             const failMsg = extractErrorMessage(batchData.error_message || batchData.errorMessage || 'Scan processing failed');
-            setLogs(prev => [...prev, `> ERROR: ${failMsg}`]);
-            toast.error('Scan failed: ' + failMsg, { id: toastId });
+            setLogs(prev => [...prev, `> REJECTED: ${failMsg}`]);
+            setErrorBanner(failMsg);
+            toast.error('Scan rejected: ' + failMsg, { id: toastId });
           } else {
             // Processing: show informative progressive steps every 4 seconds
             if (attempts % 4 === 0) {
@@ -297,8 +300,9 @@ export default function UploadPage() {
     } catch (err) {
       const displayMsg = extractErrorMessage(err);
       toast.error(displayMsg, { id: toastId });
+      setErrorBanner(displayMsg);
       setLoading(false);
-      setLogs(prev => [...prev, `> ERROR: ${displayMsg}`]);
+      setLogs(prev => [...prev, `> REJECTED: ${displayMsg}`]);
       if (files[0]) {
         saveToSyncQueue(files[0], metadata).catch(console.error);
       }
@@ -313,9 +317,22 @@ export default function UploadPage() {
     <div className="min-h-screen bg-background text-text-primary">
       {loading && <div className="fixed inset-0 z-[99999] bg-background flex items-center justify-center"><DynamicLoader /></div>}
       <NavBar />
-      <div className="max-w-[1000px] mx-auto px-6 py-12">
+      <div className="max-w-[1000px] mx-auto px-6 py-10">
         <h1 className="text-[32px] font-medium tracking-tight leading-[1.1] mb-2">Initialize Scan</h1>
-        <p className="text-[15px] text-text-secondary mb-10 flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> OCR Pipeline Active. Awaiting payload.</p>
+        <p className="text-[15px] text-text-secondary mb-6 flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Inspection Pipeline Active. Awaiting payload.</p>
+
+        {errorBanner && (
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-sm flex items-start gap-3.5 mb-6 animate-in fade-in slide-in-from-top-2">
+            <AlertTriangle size={20} className="shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-[14px]">Quality Gate Rejection</p>
+              <p className="text-xs opacity-90 mt-1 leading-relaxed">{errorBanner}</p>
+              <p className="text-[11px] opacity-75 mt-1.5 font-sans">
+                Notice: The Legal Metrology engine only processes retail packaged goods and compliance labels to avoid false evaluations.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-0 md:gap-6 flex-1 md:flex-none min-h-[calc(100vh-140px)] h-auto md:h-auto">
           <form onSubmit={handleUpload} className="mello-card p-4 md:p-8 col-span-3 flex flex-col gap-4 md:gap-6 h-full md:h-auto border-0 md:border md:shadow-sm bg-transparent md:bg-[var(--color-surface)]">
