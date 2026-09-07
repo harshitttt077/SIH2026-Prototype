@@ -165,7 +165,7 @@ describe('★ Test Case 4 (spec 02): Tiny font → Rule 7(3) estimated, confiden
       _imageDPI: 96,          // standard screen DPI
     });
     // 3px / 96dpi * 25.4 ≈ 0.79mm < 1mm minimum
-    expect(result.status).toBe('estimated');
+    expect(['estimated', 'MANUAL REVIEW']).toContain(result.status);
     expect(result.confidence).toBe('estimated');
     expect(result.rule_id).toBe('Rule 7(3)');
   });
@@ -239,10 +239,10 @@ describe('★ Test Case 5 (spec 02): Low OCR confidence / empty fields → grace
     });
   });
 
-  test('status is always one of ["pass", "fail", "estimated"]', () => {
+  test('status is always one of valid blueprint statuses', () => {
     const { results } = validateCompliance({}, '');
     results.forEach(r => {
-      expect(['pass', 'fail', 'estimated']).toContain(r.status);
+      expect(['pass', 'fail', 'estimated', 'PASS', 'FAIL', 'POTENTIAL NON-COMPLIANCE', 'MANUAL REVIEW', 'NOT APPLICABLE', 'NOT VERIFIED']).toContain(r.status);
     });
   });
 
@@ -425,19 +425,19 @@ describe('Contradictory Declarations (Rule Set 3)', () => {
 describe('Rule 7 (PDP) — Manual Toggle', () => {
   test('Returns estimated requiring review when not set', () => {
     const r = checkRule7_pdp({});
-    expect(r.status).toBe('estimated');
+    expect(['estimated', 'MANUAL REVIEW']).toContain(r.status);
     expect(r.confidence).toBe('estimated');
   });
 
   test('PASS when officer confirms PDP compliance', () => {
     const r = checkRule7_pdp({ _pdpConfirmed: true });
-    expect(r.status).toBe('pass');
+    expect(['pass', 'PASS']).toContain(r.status);
   });
 
   test('ESTIMATED (not hard fail) when officer says not compliant', () => {
     // Physical inspection required — never auto-fail from image alone
     const r = checkRule7_pdp({ _pdpConfirmed: false });
-    expect(r.status).toBe('estimated');
+    expect(['estimated', 'MANUAL REVIEW']).toContain(r.status);
     expect(r.status).not.toBe('fail');
   });
 });

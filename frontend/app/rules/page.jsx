@@ -53,15 +53,15 @@ export default function RulesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!sessionStorage.getItem('token') || sessionStorage.getItem('role') !== 'admin') return router.push('/dashboard');
     const fetchRules = async () => {
       try {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
         const API = process.env.NEXT_PUBLIC_API_URL || 'https://metrolens-backend.onrender.com/api/v1';
         const res = await fetch(`${API}/rules`, {
-          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         const statsRes = await fetch(`${API}/dashboard/stats`, {
-          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         
         if (res.ok) {
